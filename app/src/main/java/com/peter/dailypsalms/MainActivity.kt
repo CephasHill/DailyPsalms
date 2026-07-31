@@ -13,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -59,6 +60,9 @@ import kotlin.time.Duration.Companion.minutes
 
 val Context.dataStore by preferencesDataStore(name = "settings")
 
+// Global pre-compiled Regex to avoid recompiling it inside active composable loops
+private val footnoteRegex = Regex("""\^\[(.*?)]\^""")
+
 enum class FootnoteStyle(val displayName: String) {
     BRACKETED("Bracketed [a]"),
     INLINE("Inline ᵃWord"),
@@ -67,7 +71,9 @@ enum class FootnoteStyle(val displayName: String) {
 
 enum class BibleVersion(val code: String, val displayName: String) {
     NABRE("nabre", "NABRE"),
-    KJV("kjv", "KJV")
+    KJV("kjv", "KJV"),
+    LXX("lxx", "LXX (Greek)"),
+    VULGATE("vulgate", "Vulgate (Latin)")
 }
 
 sealed class NavigationTab {
@@ -682,21 +688,13 @@ fun ActiveChapterReaderScreen(
             ) { page ->
                 val chapter = context.playlist[page]
 
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp)
-                ) {
-                    item {
-                        ChapterRenderer(
-                            chapter = chapter,
-                            footnoteStyle = currentFootnoteStyle,
-                            onFootnoteClick = { marker ->
-                                selectedFootnote = chapter.footnotes.find { it.marker == marker }
-                            }
-                        )
-                        Spacer(modifier = Modifier.height(64.dp))
+                ChapterRenderer(
+                    chapter = chapter,
+                    footnoteStyle = currentFootnoteStyle,
+                    onFootnoteClick = { marker ->
+                        selectedFootnote = chapter.footnotes.find { it.marker == marker }
                     }
-                }
+                )
             }
         }
 
@@ -764,12 +762,10 @@ fun FormattedTextWithFootnotes(
     textStyle: TextStyle = MaterialTheme.typography.bodyLarge,
     linkEntirePhrase: Boolean = false
 ) {
-    val regex = Regex("""\^\[(.*?)]\^""")
-
     val annotatedString = buildAnnotatedString {
         var lastIndex = 0
 
-        for (match in regex.findAll(text)) {
+        for (match in footnoteRegex.findAll(text)) {
             val marker = match.groupValues[1]
             val precedingText = text.substring(lastIndex, match.range.first)
 
@@ -802,7 +798,9 @@ fun FormattedTextWithFootnotes(
                         append(trailingSpaces)
                     }
                     FootnoteStyle.HIDDEN -> {
+                        pushLink(link)
                         append(fullPhrase)
+                        pop()
                         append(trailingSpaces)
                     }
                 }
@@ -840,7 +838,9 @@ fun FormattedTextWithFootnotes(
                         append(trailingSpaces)
                     }
                     FootnoteStyle.HIDDEN -> {
+                        pushLink(link)
                         append(targetWord)
+                        pop()
                         append(trailingSpaces)
                     }
                 }
@@ -866,28 +866,34 @@ fun ChapterRenderer(
     footnoteStyle: FootnoteStyle,
     onFootnoteClick: (String) -> Unit
 ) {
-    Column {
-        if (chapter.chapterFootnote != null) {
-            FormattedTextWithFootnotes(
-                text = "${chapter.book} ${chapter.chapter} ${chapter.chapterFootnote}",
-                footnoteStyle = footnoteStyle,
-                onFootnoteClick = onFootnoteClick,
-                textStyle = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
-                linkEntirePhrase = true,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-        } else {
-            Text(
-                text = "${chapter.book} ${chapter.chapter}",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+    // LazyColumn handles rendering blocks like Psalm 119 dynamically and smoothly
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp)
+    ) {
+        item {
+            if (chapter.chapterFootnote != null) {
+                FormattedTextWithFootnotes(
+                    text = "${chapter.book} ${chapter.chapter} ${chapter.chapterFootnote}",
+                    footnoteStyle = footnoteStyle,
+                    onFootnoteClick = onFootnoteClick,
+                    textStyle = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                    linkEntirePhrase = true,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            } else {
+                Text(
+                    text = "${chapter.book} ${chapter.chapter}",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
         }
 
         var lastPrintedVerseStr = ""
 
-        chapter.content.forEach { item ->
+        items(chapter.content) { item ->
             when (item.type) {
                 "book_division" -> {
                     Text(
@@ -926,7 +932,7 @@ fun ChapterRenderer(
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier
                                 .padding(end = 8.dp, top = 4.dp)
-                                .width(28.dp) // Expanded from 16.dp to 28.dp to support 3-digit verses like Psalm 119
+                                .width(28.dp) // Expanded to support 3-digit verses like Psalm 119
                         )
                         Column {
                             item.lines?.forEach { line ->
@@ -943,6 +949,10 @@ fun ChapterRenderer(
                     }
                 }
             }
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(64.dp))
         }
     }
 }
