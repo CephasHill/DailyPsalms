@@ -100,6 +100,14 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+fun isAssetExists(context: Context, fileName: String): Boolean {
+    return try {
+        context.assets.list("")?.contains(fileName) == true
+    } catch (_: Exception) {
+        false
+    }
+}
+
 @Composable
 fun MainAppContainer() {
     val context = LocalContext.current
@@ -297,13 +305,23 @@ fun MainAppContainer() {
 
             val updateBibleVersion = { version: BibleVersion ->
                 coroutineScope.launch {
-                    context.dataStore.edit { p -> p[bibleVersionKey] = version.code }
+                    context.dataStore.edit { p ->
+                        p[bibleVersionKey] = version.code
+
+                        // Smart formatting toggle
+                        if (version == BibleVersion.LXX) {
+                            p[footnoteStyleKey] = FootnoteStyle.HIDDEN.name
+                        } else if (p[footnoteStyleKey] == FootnoteStyle.HIDDEN.name) {
+                            // Revert to Inline when switching back to English
+                            p[footnoteStyleKey] = FootnoteStyle.INLINE.name
+                        }
+                    }
                 }
             }
 
             if (readerContext != null) {
                 ActiveChapterReaderScreen(
-                    context = readerContext!!,
+                    readerContext = readerContext!!,
                     completedChapters = completedChapters,
                     currentFootnoteStyle = currentFootnoteStyle,
                     currentBibleVersion = currentBibleVersion,
@@ -562,7 +580,7 @@ fun LibraryScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActiveChapterReaderScreen(
-    context: ReaderContext,
+    readerContext: ReaderContext,
     completedChapters: Set<String>,
     currentFootnoteStyle: FootnoteStyle,
     currentBibleVersion: BibleVersion,
@@ -572,16 +590,17 @@ fun ActiveChapterReaderScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     var selectedFootnote by remember { mutableStateOf<Footnote?>(null) }
     var formatMenuExpanded by remember { mutableStateOf(false) }
     var versionMenuExpanded by remember { mutableStateOf(false) }
 
     val pagerState = rememberPagerState(
-        initialPage = context.initialIndex,
-        pageCount = { context.playlist.size }
+        initialPage = readerContext.initialIndex,
+        pageCount = { readerContext.playlist.size }
     )
 
-    val currentChapter = context.playlist[pagerState.currentPage]
+    val currentChapter = readerContext.playlist[pagerState.currentPage]
     val currentChapterKey = "${currentChapter.book}_${currentChapter.chapter}"
     val isCurrentChapterCompleted = completedChapters.contains(currentChapterKey)
 
@@ -609,7 +628,7 @@ fun ActiveChapterReaderScreen(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (context.isDailyMode) {
+                        if (readerContext.isDailyMode) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
@@ -634,7 +653,12 @@ fun ActiveChapterReaderScreen(
                                 expanded = versionMenuExpanded,
                                 onDismissRequest = { versionMenuExpanded = false }
                             ) {
-                                BibleVersion.entries.forEach { version ->
+                                val availableVersions = remember {
+                                    BibleVersion.entries.filter { version ->
+                                        isAssetExists(context, "psalms_${version.code}.json")
+                                    }
+                                }
+                                availableVersions.forEach { version ->
                                     DropdownMenuItem(
                                         text = {
                                             Text(
@@ -686,7 +710,7 @@ fun ActiveChapterReaderScreen(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize()
             ) { page ->
-                val chapter = context.playlist[page]
+                val chapter = readerContext.playlist[page]
 
                 ChapterRenderer(
                     chapter = chapter,
