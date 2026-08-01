@@ -35,6 +35,17 @@ android {
     buildFeatures {
         compose = true
     }
+
+    flavorDimensions += "version"
+
+    productFlavors {
+        create("publicApp") {
+            dimension = "version"
+        }
+        create("personalApp") {
+            dimension = "version"
+        }
+    }
 }
 
 dependencies {
