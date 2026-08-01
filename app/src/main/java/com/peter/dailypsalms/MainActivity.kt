@@ -70,8 +70,13 @@ enum class FootnoteStyle(val displayName: String) {
 }
 
 enum class BibleVersion(val code: String, val displayName: String) {
-    NABRE("nabre", "NABRE"),
+    ASV("asv", "ASV"),
+    DARBY("darby", "Darby"),
+    DRA("dra", "Douay-Rheims"),
     KJV("kjv", "KJV"),
+    NABRE("nabre", "NABRE"),
+    WEB("web", "WEB"),
+    YLT("ylt", "YLT"),
     LXX("lxx", "LXX (Greek)"),
     VULGATE("vulgate", "Vulgate (Latin)")
 }
