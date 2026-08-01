@@ -16,7 +16,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -68,4 +68,5 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.glance:glance-appwidget:1.1.0")
+    implementation("com.android.billingclient:billing-ktx:6.2.1")
 }

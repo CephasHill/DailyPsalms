@@ -1,5 +1,6 @@
 package com.peter.dailypsalms
 
+import android.app.Activity
 import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -58,6 +59,109 @@ import androidx.glance.appwidget.updateAll
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.minutes
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Favorite
+import com.android.billingclient.api.ProductDetails
+
+@Composable
+fun AboutScreen(
+    billingManager: BillingManager,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val activity = context as? Activity
+
+    // Observe the products loaded from Google Play
+    val products by billingManager.products.collectAsState()
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        item {
+            Icon(
+                imageVector = Icons.Default.Book,
+                contentDescription = "Logo",
+                modifier = Modifier.size(72.dp).padding(top = 24.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+
+            Text(
+                text = "Daily Psalms",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+
+            Text(
+                text = "Version 1.0.0",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 32.dp))
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Favorite,
+                        contentDescription = "Support",
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.size(32.dp)
+                    )
+
+                    Text(
+                        text = "Support the Developer",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(top = 12.dp, bottom = 8.dp)
+                    )
+
+                    Text(
+                        text = "Daily Psalms is completely free and ad-free. If this app has been a blessing to you, consider leaving a tip to support future updates!",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    // Render buttons dynamically based on what Google Play returns
+                    if (products.isEmpty()) {
+                        CircularProgressIndicator(modifier = Modifier.padding(8.dp))
+                        Text("Loading tip jar...", fontSize = 12.sp)
+                    } else {
+                        products.forEach { product ->
+                            val price = product.oneTimePurchaseOfferDetails?.formattedPrice ?: ""
+                            Button(
+                                onClick = {
+                                    if (activity != null) {
+                                        billingManager.launchBillingFlow(activity, product)
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                            ) {
+                                Text("Tip $price")
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
 
 val Context.dataStore by preferencesDataStore(name = "settings")
 
@@ -86,6 +190,7 @@ enum class BibleVersion(val code: String, val displayName: String) {
 sealed class NavigationTab {
     object Daily : NavigationTab()
     object Library : NavigationTab()
+    object About : NavigationTab()
 }
 
 data class ReaderContext(
@@ -120,6 +225,8 @@ fun MainAppContainer() {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
+    val billingManager = remember { BillingManager(context) }
+
     val prefs by context.dataStore.data.collectAsState(initial = emptyPreferences())
 
     // DataStore Keys
@@ -130,10 +237,17 @@ fun MainAppContainer() {
     val last100DateKey = stringPreferencesKey("last_100_date")
     val streakKey = intPreferencesKey("streak")
 
-    // Load active version (defaults to NABRE)
-    val currentVersionCode = prefs[bibleVersionKey] ?: BibleVersion.NABRE.code
-    val currentBibleVersion = BibleVersion.entries.find { it.code == currentVersionCode } ?: BibleVersion.NABRE
+    // 1. Get the saved version, or default to a public domain version like WEB
+    val preferredVersionCode = prefs[bibleVersionKey] ?: BibleVersion.KJV.code
 
+    // 2. CRITICAL SAFETY CHECK: Ensure the asset actually exists in this build flavor
+    val safeVersionCode = if (isAssetExists(context, "psalms_$preferredVersionCode.json")) {
+        preferredVersionCode
+    } else {
+        BibleVersion.KJV.code // Fallback to a guaranteed public version
+    }
+
+    val currentBibleVersion = BibleVersion.entries.find { it.code == safeVersionCode } ?: BibleVersion.WEB
     // Dynamically load the repository based on active version
     val repo = remember(currentBibleVersion) { BibleRepository(context, currentBibleVersion.code) }
     val allPsalms = remember(currentBibleVersion) { repo.loadPsalms() }
@@ -256,6 +370,12 @@ fun MainAppContainer() {
                         icon = { Icon(Icons.Default.Book, contentDescription = "Library") },
                         label = { Text("Library") }
                     )
+                    NavigationBarItem(
+                        selected = selectedTab is NavigationTab.About,
+                        onClick = { selectedTab = NavigationTab.About },
+                        icon = { Icon(Icons.Default.Info, contentDescription = "About") },
+                        label = { Text("About") }
+                    )
                 }
             }
         }
@@ -367,6 +487,12 @@ fun MainAppContainer() {
                                     isDailyMode = false
                                 )
                             },
+                            modifier = Modifier.padding(innerPadding)
+                        )
+                    }
+                    is NavigationTab.About -> {
+                        AboutScreen(
+                            billingManager = billingManager,
                             modifier = Modifier.padding(innerPadding)
                         )
                     }
