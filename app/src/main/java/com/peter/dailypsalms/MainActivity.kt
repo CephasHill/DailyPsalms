@@ -19,9 +19,12 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.*
@@ -49,20 +52,16 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.glance.appwidget.updateAll
+import com.android.billingclient.api.ProductDetails
 import com.peter.dailypsalms.ui.theme.DailyPsalmsTheme
 import com.peter.dailypsalms.ui.theme.DailyPsalmsWidget
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import androidx.glance.appwidget.updateAll
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.minutes
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Favorite
-import com.android.billingclient.api.ProductDetails
 
 @Composable
 fun AboutScreen(
@@ -168,6 +167,12 @@ val Context.dataStore by preferencesDataStore(name = "settings")
 // Global pre-compiled Regex to avoid recompiling it inside active composable loops
 private val footnoteRegex = Regex("""\^\[(.*?)]\^""")
 
+enum class FontSizeOption(val displayName: String, val scale: Float) {
+    SMALL("Small", 0.85f),
+    MEDIUM("Medium", 1.0f),
+    LARGE("Large", 1.2f)
+}
+
 enum class FootnoteStyle(val displayName: String) {
     BRACKETED("Bracketed [a]"),
     INLINE("Inline ᵃWord"),
@@ -234,10 +239,11 @@ fun MainAppContainer() {
     val completedChaptersKey = stringSetPreferencesKey("completed_chapters")
     val footnoteStyleKey = stringPreferencesKey("footnote_style")
     val bibleVersionKey = stringPreferencesKey("bible_version")
+    val fontSizeKey = stringPreferencesKey("font_size")
     val last100DateKey = stringPreferencesKey("last_100_date")
     val streakKey = intPreferencesKey("streak")
 
-    // 1. Get the saved version, or default to a public domain version like WEB
+    // 1. Get the saved version, or default to a public domain version like KJV
     val preferredVersionCode = prefs[bibleVersionKey] ?: BibleVersion.KJV.code
 
     // 2. CRITICAL SAFETY CHECK: Ensure the asset actually exists in this build flavor
@@ -300,6 +306,10 @@ fun MainAppContainer() {
     val currentFootnoteStyle = try {
         FootnoteStyle.valueOf(prefs[footnoteStyleKey] ?: FootnoteStyle.INLINE.name)
     } catch (_: Exception) { FootnoteStyle.INLINE }
+
+    val currentFontSizeOption = try {
+        FontSizeOption.valueOf(prefs[fontSizeKey] ?: FontSizeOption.MEDIUM.name)
+    } catch (_: Exception) { FontSizeOption.MEDIUM }
 
     val last100Date = prefs[last100DateKey] ?: ""
     val actualStreak = prefs[streakKey] ?: 0
@@ -430,6 +440,12 @@ fun MainAppContainer() {
                 }
             }
 
+            val updateFontSize = { size: FontSizeOption ->
+                coroutineScope.launch {
+                    context.dataStore.edit { p -> p[fontSizeKey] = size.name }
+                }
+            }
+
             val updateBibleVersion = { version: BibleVersion ->
                 coroutineScope.launch {
                     context.dataStore.edit { p ->
@@ -452,8 +468,10 @@ fun MainAppContainer() {
                     completedChapters = completedChapters,
                     currentFootnoteStyle = currentFootnoteStyle,
                     currentBibleVersion = currentBibleVersion,
+                    currentFontSize = currentFontSizeOption,
                     onFootnoteStyleChange = { updateFootnoteStyle(it) },
                     onBibleVersionChange = { updateBibleVersion(it) },
+                    onFontSizeChange = { updateFontSize(it) },
                     onToggleComplete = { key -> toggleChapterCompletion(key) },
                     onBack = { readerContext = null },
                     modifier = Modifier.padding(innerPadding)
@@ -717,8 +735,10 @@ fun ActiveChapterReaderScreen(
     completedChapters: Set<String>,
     currentFootnoteStyle: FootnoteStyle,
     currentBibleVersion: BibleVersion,
+    currentFontSize: FontSizeOption,
     onFootnoteStyleChange: (FootnoteStyle) -> Unit,
     onBibleVersionChange: (BibleVersion) -> Unit,
+    onFontSizeChange: (FontSizeOption) -> Unit,
     onToggleComplete: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
@@ -727,6 +747,7 @@ fun ActiveChapterReaderScreen(
     var selectedFootnote by remember { mutableStateOf<Footnote?>(null) }
     var formatMenuExpanded by remember { mutableStateOf(false) }
     var versionMenuExpanded by remember { mutableStateOf(false) }
+    var sizeMenuExpanded by remember { mutableStateOf(false) }
 
     val pagerState = rememberPagerState(
         initialPage = readerContext.initialIndex,
@@ -736,6 +757,11 @@ fun ActiveChapterReaderScreen(
     val currentChapter = readerContext.playlist[pagerState.currentPage]
     val currentChapterKey = "${currentChapter.book}_${currentChapter.chapter}"
     val isCurrentChapterCompleted = completedChapters.contains(currentChapterKey)
+
+    // Dynamically detect if any loaded chapter in this playlist contains footnotes
+    val hasFootnotes = remember(readerContext.playlist) {
+        readerContext.playlist.any { it.footnotes.isNotEmpty() }
+    }
 
     BackHandler {
         if (selectedFootnote != null) {
@@ -752,11 +778,14 @@ fun ActiveChapterReaderScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onBack) {
+                    TextButton(
+                        onClick = onBack,
+                        contentPadding = PaddingValues(horizontal = 8.dp)
+                    ) {
                         Text("← Back")
                     }
 
@@ -766,7 +795,7 @@ fun ActiveChapterReaderScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .clickable { onToggleComplete(currentChapterKey) }
-                                    .padding(horizontal = 8.dp)
+                                    .padding(horizontal = 4.dp)
                             ) {
                                 Text("Done", style = MaterialTheme.typography.labelLarge)
                                 Checkbox(
@@ -777,9 +806,42 @@ fun ActiveChapterReaderScreen(
                             }
                         }
 
+                        // Size Selector Dropdown
+                        Box {
+                            TextButton(
+                                onClick = { sizeMenuExpanded = true },
+                                contentPadding = PaddingValues(horizontal = 6.dp)
+                            ) {
+                                Text("Size ▼", fontWeight = FontWeight.Bold)
+                            }
+                            DropdownMenu(
+                                expanded = sizeMenuExpanded,
+                                onDismissRequest = { sizeMenuExpanded = false }
+                            ) {
+                                FontSizeOption.entries.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = option.displayName,
+                                                fontWeight = if (option == currentFontSize) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (option == currentFontSize) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        },
+                                        onClick = {
+                                            onFontSizeChange(option)
+                                            sizeMenuExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
                         // Version Selector Dropdown
                         Box {
-                            TextButton(onClick = { versionMenuExpanded = true }) {
+                            TextButton(
+                                onClick = { versionMenuExpanded = true },
+                                contentPadding = PaddingValues(horizontal = 6.dp)
+                            ) {
                                 Text("${currentBibleVersion.displayName} ▼", fontWeight = FontWeight.Bold)
                             }
                             DropdownMenu(
@@ -809,29 +871,34 @@ fun ActiveChapterReaderScreen(
                             }
                         }
 
-                        // Format Selector Dropdown
-                        Box {
-                            TextButton(onClick = { formatMenuExpanded = true }) {
-                                Text("Format ▼", fontWeight = FontWeight.Bold)
-                            }
-                            DropdownMenu(
-                                expanded = formatMenuExpanded,
-                                onDismissRequest = { formatMenuExpanded = false }
-                            ) {
-                                FootnoteStyle.entries.forEach { style ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = style.displayName,
-                                                fontWeight = if (style == currentFootnoteStyle) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (style == currentFootnoteStyle) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                            )
-                                        },
-                                        onClick = {
-                                            onFootnoteStyleChange(style)
-                                            formatMenuExpanded = false
-                                        }
-                                    )
+                        // Format Selector Dropdown (Only visible if the version includes footnotes)
+                        if (hasFootnotes) {
+                            Box {
+                                TextButton(
+                                    onClick = { formatMenuExpanded = true },
+                                    contentPadding = PaddingValues(horizontal = 6.dp)
+                                ) {
+                                    Text("Format ▼", fontWeight = FontWeight.Bold)
+                                }
+                                DropdownMenu(
+                                    expanded = formatMenuExpanded,
+                                    onDismissRequest = { formatMenuExpanded = false }
+                                ) {
+                                    FootnoteStyle.entries.forEach { style ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    text = style.displayName,
+                                                    fontWeight = if (style == currentFootnoteStyle) FontWeight.Bold else FontWeight.Normal,
+                                                    color = if (style == currentFootnoteStyle) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                                )
+                                            },
+                                            onClick = {
+                                                onFootnoteStyleChange(style)
+                                                formatMenuExpanded = false
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -848,6 +915,7 @@ fun ActiveChapterReaderScreen(
                 ChapterRenderer(
                     chapter = chapter,
                     footnoteStyle = currentFootnoteStyle,
+                    fontSizeOption = currentFontSize,
                     onFootnoteClick = { marker ->
                         selectedFootnote = chapter.footnotes.find { it.marker == marker }
                     }
@@ -1027,8 +1095,11 @@ fun FormattedTextWithFootnotes(
 fun ChapterRenderer(
     chapter: ChapterData,
     footnoteStyle: FootnoteStyle,
+    fontSizeOption: FontSizeOption,
     onFootnoteClick: (String) -> Unit
 ) {
+    val scale = fontSizeOption.scale
+
     // LazyColumn handles rendering blocks like Psalm 119 dynamically and smoothly
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -1040,14 +1111,21 @@ fun ChapterRenderer(
                     text = "${chapter.book} ${chapter.chapter} ${chapter.chapterFootnote}",
                     footnoteStyle = footnoteStyle,
                     onFootnoteClick = onFootnoteClick,
-                    textStyle = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                    textStyle = MaterialTheme.typography.headlineLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = (32 * scale).sp,
+                        lineHeight = (38 * scale).sp
+                    ),
                     linkEntirePhrase = true,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
             } else {
                 Text(
                     text = "${chapter.book} ${chapter.chapter}",
-                    style = MaterialTheme.typography.headlineLarge,
+                    style = MaterialTheme.typography.headlineLarge.copy(
+                        fontSize = (32 * scale).sp,
+                        lineHeight = (38 * scale).sp
+                    ),
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
@@ -1062,6 +1140,8 @@ fun ChapterRenderer(
                     Text(
                         text = item.text ?: "",
                         fontStyle = FontStyle.Italic,
+                        fontSize = (14 * scale).sp,
+                        lineHeight = (18 * scale).sp,
                         modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
                     )
                 }
@@ -1070,7 +1150,11 @@ fun ChapterRenderer(
                         text = item.text ?: "",
                         footnoteStyle = footnoteStyle,
                         onFootnoteClick = onFootnoteClick,
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold, fontSize = 18.sp),
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = (18 * scale).sp,
+                            lineHeight = (24 * scale).sp
+                        ),
                         modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
                     )
                 }
@@ -1078,6 +1162,8 @@ fun ChapterRenderer(
                     Text(
                         text = item.text ?: "",
                         fontWeight = FontWeight.SemiBold,
+                        fontSize = (14 * scale).sp,
+                        lineHeight = (18 * scale).sp,
                         modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
                     )
                 }
@@ -1091,11 +1177,11 @@ fun ChapterRenderer(
                     Row(modifier = Modifier.padding(bottom = 4.dp)) {
                         Text(
                             text = if (showNumber) currentVerseStr else "",
-                            fontSize = 10.sp,
+                            fontSize = (10 * scale).sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier
-                                .padding(end = 8.dp, top = 4.dp)
-                                .width(28.dp) // Expanded to support 3-digit verses like Psalm 119
+                                .padding(end = 8.dp, top = (4 * scale).dp)
+                                .width((28 * scale).dp) // Expanded to support 3-digit verses like Psalm 119
                         )
                         Column {
                             item.lines?.forEach { line ->
@@ -1103,6 +1189,10 @@ fun ChapterRenderer(
                                     text = line.text,
                                     footnoteStyle = footnoteStyle,
                                     onFootnoteClick = onFootnoteClick,
+                                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                        fontSize = (16 * scale).sp,
+                                        lineHeight = (22 * scale).sp
+                                    ),
                                     modifier = Modifier.padding(
                                         start = if (line.indent == 1) 16.dp else 0.dp
                                     )

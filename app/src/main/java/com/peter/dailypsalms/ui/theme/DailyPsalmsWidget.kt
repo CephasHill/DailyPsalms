@@ -62,7 +62,7 @@ class DailyPsalmsWidget : GlanceAppWidget() {
             Column(
                 modifier = GlanceModifier
                     .fillMaxSize()
-                    .background(Color(0xFF2E4034)) // Rich green background
+                    .background(Color(0xFF005B8E)) // Rich blue background
                     .padding(10.dp)
                     .clickable(actionStartActivity(Intent(context, MainActivity::class.java))),
                 verticalAlignment = Alignment.CenterVertically,
