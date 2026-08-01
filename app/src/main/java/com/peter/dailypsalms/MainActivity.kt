@@ -57,6 +57,7 @@ import java.time.format.DateTimeFormatter
 import androidx.glance.appwidget.updateAll
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.minutes
+import androidx.compose.foundation.verticalScroll
 
 val Context.dataStore by preferencesDataStore(name = "settings")
 
@@ -77,6 +78,7 @@ enum class BibleVersion(val code: String, val displayName: String) {
     NABRE("nabre", "NABRE"),
     WEB("web", "WEB"),
     YLT("ylt", "YLT"),
+    HEB("heb", "WLC (Hebrew)"),
     LXX("lxx", "LXX (Greek)"),
     VULGATE("vulgate", "Vulgate (Latin)")
 }
@@ -314,7 +316,7 @@ fun MainAppContainer() {
                         p[bibleVersionKey] = version.code
 
                         // Smart formatting toggle
-                        if (version == BibleVersion.LXX) {
+                        if (version == BibleVersion.LXX || version == BibleVersion.HEB) {
                             p[footnoteStyleKey] = FootnoteStyle.HIDDEN.name
                         } else if (p[footnoteStyleKey] == FootnoteStyle.HIDDEN.name) {
                             // Revert to Inline when switching back to English
@@ -754,6 +756,7 @@ fun ActiveChapterReaderScreen(
                         .fillMaxSize()
                         .padding(16.dp)
                 ) {
+                    // 1. HEADER ROW (Title & Close Button)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -769,12 +772,17 @@ fun ActiveChapterReaderScreen(
                         }
                     }
 
+                    // 2. DIVIDER
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
+                    // 3. SCROLLABLE BODY TEXT
                     Text(
                         text = selectedFootnote?.text ?: "",
                         style = MaterialTheme.typography.bodyMedium,
-                        lineHeight = 22.sp
+                        lineHeight = 22.sp,
+                        modifier = Modifier
+                            .weight(1f) // Forces the text to fill remaining space
+                            .verticalScroll(rememberScrollState()) // Enables vertical scrolling
                     )
                 }
             }
@@ -1031,6 +1039,8 @@ fun ParticleExplosion(modifier: Modifier = Modifier, onFinished: () -> Unit) {
     }
 
     Canvas(modifier = modifier) {
+        // Read the frame state to force the Canvas to redraw every single tick
+        val currentFrame = frame
 
         val w = size.width
         val h = size.height
@@ -1039,7 +1049,9 @@ fun ParticleExplosion(modifier: Modifier = Modifier, onFinished: () -> Unit) {
                 translate(left = p.x * w, top = p.y * h)
                 rotate(p.rotation)
             }) {
-                drawRect(color = p.color, size = Size(24f, 24f))
+                // Use the frame count to calculate a nice fade-out effect!
+                val alpha = 1f - (currentFrame / 120f)
+                drawRect(color = p.color.copy(alpha = alpha.coerceIn(0f, 1f)), size = Size(24f, 24f))
             }
         }
     }
