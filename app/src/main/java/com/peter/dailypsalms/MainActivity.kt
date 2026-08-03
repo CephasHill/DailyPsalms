@@ -62,6 +62,8 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.minutes
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun AboutScreen(
@@ -231,7 +233,6 @@ fun MainAppContainer() {
     val coroutineScope = rememberCoroutineScope()
 
     val billingManager = remember { BillingManager(context) }
-
     val prefs by context.dataStore.data.collectAsState(initial = emptyPreferences())
 
     // DataStore Keys
@@ -243,31 +244,72 @@ fun MainAppContainer() {
     val last100DateKey = stringPreferencesKey("last_100_date")
     val streakKey = intPreferencesKey("streak")
 
-    // 1. Get the saved version, or default to a public domain version like KJV
     val preferredVersionCode = prefs[bibleVersionKey] ?: BibleVersion.KJV.code
-
-    // 2. CRITICAL SAFETY CHECK: Ensure the asset actually exists in this build flavor
     val safeVersionCode = if (isAssetExists(context, "psalms_$preferredVersionCode.json")) {
         preferredVersionCode
     } else {
-        BibleVersion.KJV.code // Fallback to a guaranteed public version
+        BibleVersion.KJV.code
     }
 
     val currentBibleVersion = BibleVersion.entries.find { it.code == safeVersionCode } ?: BibleVersion.WEB
-    // Dynamically load the repository based on active version
     val repo = remember(currentBibleVersion) { BibleRepository(context, currentBibleVersion.code) }
-    val allPsalms = remember(currentBibleVersion) { repo.loadPsalms() }
-    val allProverbs = remember(currentBibleVersion) { repo.loadProverbs() }
+
+    // --- START OF CHANGES ---
+
+    // 1. Convert static variables to State variables
+    var allPsalms by remember { mutableStateOf<List<ChapterData>>(emptyList()) }
+    var allProverbs by remember { mutableStateOf<List<ChapterData>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    var showExplosion by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableStateOf<NavigationTab>(NavigationTab.Daily) }
+    var readerContext by remember { mutableStateOf<ReaderContext?>(null) }
 
     val today = LocalDate.now().dayOfMonth
-
-    // Day 31 maps to Psalm 119; Day 19 omits Psalm 119 target math
     val psalmsTargets = if (today == 31) {
         listOf(119)
     } else {
         listOf(today, today + 30, today + 60, today + 90, today + 120)
             .filter { it <= 150 && (today != 19 || it != 119) }
     }
+
+    // 2. Load the data on a background thread whenever the version changes
+    LaunchedEffect(currentBibleVersion) {
+        isLoading = true
+        withContext(Dispatchers.IO) {
+            // Fetch heavy JSON files on the background thread
+            val loadedPsalms = repo.loadPsalms()
+            val loadedProverbs = repo.loadProverbs()
+
+            withContext(Dispatchers.Main) {
+                // Pass data back to the main thread and update state
+                allPsalms = loadedPsalms
+                allProverbs = loadedProverbs
+
+                // Automatically update the active reader playlist if the user was reading
+                readerContext?.let { oldContext ->
+                    val currentChap = oldContext.playlist.getOrNull(oldContext.initialIndex)
+
+                    val newTodayPsalms = loadedPsalms.filter { it.chapter in psalmsTargets }
+                    val newTodayProverb = loadedProverbs.find { it.chapter == today }
+                    val newTodayPlaylist = newTodayPsalms + listOfNotNull(newTodayProverb)
+
+                    val activePlaylist = if (oldContext.isDailyMode) newTodayPlaylist else {
+                        if (currentChap?.book == "Proverbs") loadedProverbs else loadedPsalms
+                    }
+                    val newIndex = activePlaylist.indexOfFirst { it.book == currentChap?.book && it.chapter == currentChap.chapter }.takeIf { it >= 0 } ?: 0
+
+                    readerContext = ReaderContext(
+                        playlist = activePlaylist,
+                        initialIndex = newIndex,
+                        isDailyMode = oldContext.isDailyMode
+                    )
+                }
+                isLoading = false
+            }
+        }
+    }
+    // --- END OF DATA LOADING CHANGES ---
 
     val todayPsalms = allPsalms.filter { it.chapter in psalmsTargets }
     val todayProverb = allProverbs.find { it.chapter == today }
@@ -276,7 +318,6 @@ fun MainAppContainer() {
     val todayStr = LocalDate.now().toString()
     val yesterdayStr = LocalDate.now().minusDays(1).toString()
 
-    // Background watcher to handle midnight rollovers seamlessly if the app is open
     LaunchedEffect(Unit) {
         while (true) {
             delay(1.minutes)
@@ -287,7 +328,6 @@ fun MainAppContainer() {
         }
     }
 
-    // Force widget refresh on startup
     LaunchedEffect(Unit) {
         DailyPsalmsWidget().updateAll(context)
     }
@@ -299,7 +339,6 @@ fun MainAppContainer() {
         emptySet()
     }
 
-    // Filter out any stale keys that don't belong to today's valid playlist
     val todayPlaylistKeys = todayPlaylist.map { "${it.book}_${it.chapter}" }.toSet()
     val completedChapters = rawCompletedChapters.intersect(todayPlaylistKeys)
 
@@ -318,29 +357,6 @@ fun MainAppContainer() {
         todayStr -> actualStreak
         yesterdayStr -> actualStreak
         else -> 0
-    }
-
-    var showExplosion by remember { mutableStateOf(false) }
-    var selectedTab by remember { mutableStateOf<NavigationTab>(NavigationTab.Daily) }
-    var readerContext by remember { mutableStateOf<ReaderContext?>(null) }
-
-    // Automatically update the active reader playlist and index when the Bible version changes
-    LaunchedEffect(currentBibleVersion) {
-        readerContext?.let { oldContext ->
-            val currentChap = oldContext.playlist.getOrNull(oldContext.initialIndex)
-            val activePlaylist = if (oldContext.isDailyMode) {
-                todayPlaylist
-            } else {
-                if (currentChap?.book == "Proverbs") allProverbs else allPsalms
-            }
-            val newIndex = activePlaylist.indexOfFirst { it.book == currentChap?.book && it.chapter == currentChap.chapter }.takeIf { it >= 0 } ?: 0
-
-            readerContext = ReaderContext(
-                playlist = activePlaylist,
-                initialIndex = newIndex,
-                isDailyMode = oldContext.isDailyMode
-            )
-        }
     }
 
     BackHandler(enabled = readerContext != null) {
@@ -428,41 +444,48 @@ fun MainAppContainer() {
                             }
                         }
                     }
-
-                    // Tell the home screen widget to refresh instantly!
                     DailyPsalmsWidget().updateAll(context)
                 }
             }
 
             val updateFootnoteStyle = { style: FootnoteStyle ->
-                coroutineScope.launch {
-                    context.dataStore.edit { p -> p[footnoteStyleKey] = style.name }
-                }
+                coroutineScope.launch { context.dataStore.edit { p -> p[footnoteStyleKey] = style.name } }
             }
 
             val updateFontSize = { size: FontSizeOption ->
-                coroutineScope.launch {
-                    context.dataStore.edit { p -> p[fontSizeKey] = size.name }
-                }
+                coroutineScope.launch { context.dataStore.edit { p -> p[fontSizeKey] = size.name } }
             }
 
             val updateBibleVersion = { version: BibleVersion ->
                 coroutineScope.launch {
                     context.dataStore.edit { p ->
                         p[bibleVersionKey] = version.code
-
-                        // Smart formatting toggle
                         if (version == BibleVersion.LXX || version == BibleVersion.HEB) {
                             p[footnoteStyleKey] = FootnoteStyle.HIDDEN.name
                         } else if (p[footnoteStyleKey] == FootnoteStyle.HIDDEN.name) {
-                            // Revert to Inline when switching back to English
                             p[footnoteStyleKey] = FootnoteStyle.INLINE.name
                         }
                     }
                 }
             }
 
-            if (readerContext != null) {
+            // --- START OF UI LOADING CHANGES ---
+            if (isLoading) {
+                // Display a loading spinner in the center of the screen while parsing JSON
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(innerPadding),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Loading ${currentBibleVersion.displayName}...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else if (readerContext != null) {
                 ActiveChapterReaderScreen(
                     readerContext = readerContext!!,
                     completedChapters = completedChapters,
@@ -516,6 +539,7 @@ fun MainAppContainer() {
                     }
                 }
             }
+            // --- END OF UI LOADING CHANGES ---
 
             if (showExplosion) {
                 ParticleExplosion(
