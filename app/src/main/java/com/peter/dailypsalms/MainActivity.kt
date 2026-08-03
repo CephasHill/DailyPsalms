@@ -7,12 +7,26 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -27,8 +41,38 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Today
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -50,20 +94,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.glance.appwidget.updateAll
-import com.android.billingclient.api.ProductDetails
 import com.peter.dailypsalms.ui.theme.DailyPsalmsTheme
 import com.peter.dailypsalms.ui.theme.DailyPsalmsWidget
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.minutes
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @Composable
 fun AboutScreen(
@@ -166,7 +214,7 @@ fun AboutScreen(
 
 val Context.dataStore by preferencesDataStore(name = "settings")
 
-// Global pre-compiled Regex to avoid recompiling it inside active composable loops
+// Global pre-compiled Regex objects
 private val footnoteRegex = Regex("""\^\[(.*?)]\^""")
 
 enum class FontSizeOption(val displayName: String, val scale: Float) {
@@ -241,7 +289,8 @@ fun MainAppContainer() {
     val footnoteStyleKey = stringPreferencesKey("footnote_style")
     val bibleVersionKey = stringPreferencesKey("bible_version")
     val fontSizeKey = stringPreferencesKey("font_size")
-    val last100DateKey = stringPreferencesKey("last_100_date")
+    val showGrammarColorsKey = booleanPreferencesKey("show_grammar_colors")
+    val last100DateKey = stringPreferencesKey("last_100Date_key")
     val streakKey = intPreferencesKey("streak")
 
     val preferredVersionCode = prefs[bibleVersionKey] ?: BibleVersion.KJV.code
@@ -254,9 +303,6 @@ fun MainAppContainer() {
     val currentBibleVersion = BibleVersion.entries.find { it.code == safeVersionCode } ?: BibleVersion.WEB
     val repo = remember(currentBibleVersion) { BibleRepository(context, currentBibleVersion.code) }
 
-    // --- START OF CHANGES ---
-
-    // 1. Convert static variables to State variables
     var allPsalms by remember { mutableStateOf<List<ChapterData>>(emptyList()) }
     var allProverbs by remember { mutableStateOf<List<ChapterData>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -273,20 +319,16 @@ fun MainAppContainer() {
             .filter { it <= 150 && (today != 19 || it != 119) }
     }
 
-    // 2. Load the data on a background thread whenever the version changes
     LaunchedEffect(currentBibleVersion) {
         isLoading = true
         withContext(Dispatchers.IO) {
-            // Fetch heavy JSON files on the background thread
             val loadedPsalms = repo.loadPsalms()
             val loadedProverbs = repo.loadProverbs()
 
             withContext(Dispatchers.Main) {
-                // Pass data back to the main thread and update state
                 allPsalms = loadedPsalms
                 allProverbs = loadedProverbs
 
-                // Automatically update the active reader playlist if the user was reading
                 readerContext?.let { oldContext ->
                     val currentChap = oldContext.playlist.getOrNull(oldContext.initialIndex)
 
@@ -309,7 +351,6 @@ fun MainAppContainer() {
             }
         }
     }
-    // --- END OF DATA LOADING CHANGES ---
 
     val todayPsalms = allPsalms.filter { it.chapter in psalmsTargets }
     val todayProverb = allProverbs.find { it.chapter == today }
@@ -349,6 +390,8 @@ fun MainAppContainer() {
     val currentFontSizeOption = try {
         FontSizeOption.valueOf(prefs[fontSizeKey] ?: FontSizeOption.MEDIUM.name)
     } catch (_: Exception) { FontSizeOption.MEDIUM }
+
+    val currentShowGrammar = prefs[showGrammarColorsKey] ?: true
 
     val last100Date = prefs[last100DateKey] ?: ""
     val actualStreak = prefs[streakKey] ?: 0
@@ -456,6 +499,10 @@ fun MainAppContainer() {
                 coroutineScope.launch { context.dataStore.edit { p -> p[fontSizeKey] = size.name } }
             }
 
+            val updateGrammarColors = { show: Boolean ->
+                coroutineScope.launch { context.dataStore.edit { p -> p[showGrammarColorsKey] = show } }
+            }
+
             val updateBibleVersion = { version: BibleVersion ->
                 coroutineScope.launch {
                     context.dataStore.edit { p ->
@@ -469,9 +516,7 @@ fun MainAppContainer() {
                 }
             }
 
-            // --- START OF UI LOADING CHANGES ---
             if (isLoading) {
-                // Display a loading spinner in the center of the screen while parsing JSON
                 Column(
                     modifier = Modifier.fillMaxSize().padding(innerPadding),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -492,9 +537,11 @@ fun MainAppContainer() {
                     currentFootnoteStyle = currentFootnoteStyle,
                     currentBibleVersion = currentBibleVersion,
                     currentFontSize = currentFontSizeOption,
+                    showGrammarColors = currentShowGrammar,
                     onFootnoteStyleChange = { updateFootnoteStyle(it) },
                     onBibleVersionChange = { updateBibleVersion(it) },
                     onFontSizeChange = { updateFontSize(it) },
+                    onGrammarColorsChange = { updateGrammarColors(it) },
                     onToggleComplete = { key -> toggleChapterCompletion(key) },
                     onBack = { readerContext = null },
                     modifier = Modifier.padding(innerPadding)
@@ -539,7 +586,6 @@ fun MainAppContainer() {
                     }
                 }
             }
-            // --- END OF UI LOADING CHANGES ---
 
             if (showExplosion) {
                 ParticleExplosion(
@@ -760,9 +806,11 @@ fun ActiveChapterReaderScreen(
     currentFootnoteStyle: FootnoteStyle,
     currentBibleVersion: BibleVersion,
     currentFontSize: FontSizeOption,
+    showGrammarColors: Boolean,
     onFootnoteStyleChange: (FootnoteStyle) -> Unit,
     onBibleVersionChange: (BibleVersion) -> Unit,
     onFontSizeChange: (FontSizeOption) -> Unit,
+    onGrammarColorsChange: (Boolean) -> Unit,
     onToggleComplete: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
@@ -782,9 +830,15 @@ fun ActiveChapterReaderScreen(
     val currentChapterKey = "${currentChapter.book}_${currentChapter.chapter}"
     val isCurrentChapterCompleted = completedChapters.contains(currentChapterKey)
 
-    // Dynamically detect if any loaded chapter in this playlist contains footnotes
     val hasFootnotes = remember(readerContext.playlist) {
         readerContext.playlist.any { it.footnotes.isNotEmpty() }
+    }
+
+    // Force hidden footnotes for original language texts so the screen isn't flooded with Strong's numbers
+    val effectiveFootnoteStyle = if (currentBibleVersion == BibleVersion.HEB || currentBibleVersion == BibleVersion.LXX) {
+        FootnoteStyle.HIDDEN
+    } else {
+        currentFootnoteStyle
     }
 
     BackHandler {
@@ -895,8 +949,9 @@ fun ActiveChapterReaderScreen(
                             }
                         }
 
-                        // Format Selector Dropdown (Only visible if the version includes footnotes)
-                        if (hasFootnotes) {
+                        // Format Selector Dropdown
+                        val showFootnoteOptions = hasFootnotes && currentBibleVersion != BibleVersion.HEB && currentBibleVersion != BibleVersion.LXX
+                        if (showFootnoteOptions || currentBibleVersion == BibleVersion.HEB || currentBibleVersion == BibleVersion.LXX) {
                             Box {
                                 TextButton(
                                     onClick = { formatMenuExpanded = true },
@@ -908,17 +963,58 @@ fun ActiveChapterReaderScreen(
                                     expanded = formatMenuExpanded,
                                     onDismissRequest = { formatMenuExpanded = false }
                                 ) {
-                                    FootnoteStyle.entries.forEach { style ->
+                                    if (showFootnoteOptions) {
+                                        Text(
+                                            text = "Footnote Style",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                        )
+                                        FootnoteStyle.entries.forEach { style ->
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Text(
+                                                        text = style.displayName,
+                                                        fontWeight = if (style == currentFootnoteStyle) FontWeight.Bold else FontWeight.Normal,
+                                                        color = if (style == currentFootnoteStyle) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                },
+                                                onClick = {
+                                                    onFootnoteStyleChange(style)
+                                                    formatMenuExpanded = false
+                                                }
+                                            )
+                                        }
+                                    }
+
+                                    if (currentBibleVersion == BibleVersion.HEB || currentBibleVersion == BibleVersion.LXX) {
+                                        if (showFootnoteOptions) {
+                                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                        }
+                                        Text(
+                                            text = "Language Tools",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                        )
                                         DropdownMenuItem(
                                             text = {
-                                                Text(
-                                                    text = style.displayName,
-                                                    fontWeight = if (style == currentFootnoteStyle) FontWeight.Bold else FontWeight.Normal,
-                                                    color = if (style == currentFootnoteStyle) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                                )
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Text("Grammar Colors")
+                                                    Spacer(modifier = Modifier.width(16.dp))
+                                                    Switch(
+                                                        checked = showGrammarColors,
+                                                        onCheckedChange = null,
+                                                        modifier = Modifier.scale(0.8f)
+                                                    )
+                                                }
                                             },
                                             onClick = {
-                                                onFootnoteStyleChange(style)
+                                                onGrammarColorsChange(!showGrammarColors)
                                                 formatMenuExpanded = false
                                             }
                                         )
@@ -938,8 +1034,9 @@ fun ActiveChapterReaderScreen(
 
                 ChapterRenderer(
                     chapter = chapter,
-                    footnoteStyle = currentFootnoteStyle,
+                    footnoteStyle = effectiveFootnoteStyle,
                     fontSizeOption = currentFontSize,
+                    showGrammarColors = showGrammarColors,
                     onFootnoteClick = { marker ->
                         selectedFootnote = chapter.footnotes.find { it.marker == marker }
                     }
@@ -974,7 +1071,6 @@ fun ActiveChapterReaderScreen(
                         .fillMaxSize()
                         .padding(16.dp)
                 ) {
-                    // 1. HEADER ROW (Title & Close Button)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -990,17 +1086,15 @@ fun ActiveChapterReaderScreen(
                         }
                     }
 
-                    // 2. DIVIDER
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-                    // 3. SCROLLABLE BODY TEXT
                     Text(
                         text = selectedFootnote?.text ?: "",
                         style = MaterialTheme.typography.bodyMedium,
                         lineHeight = 22.sp,
                         modifier = Modifier
-                            .weight(1f) // Forces the text to fill remaining space
-                            .verticalScroll(rememberScrollState()) // Enables vertical scrolling
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
                     )
                 }
             }
@@ -1012,12 +1106,102 @@ fun ActiveChapterReaderScreen(
 fun FormattedTextWithFootnotes(
     text: String,
     footnoteStyle: FootnoteStyle,
+    showGrammarColors: Boolean,
     onFootnoteClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     textStyle: TextStyle = MaterialTheme.typography.bodyLarge,
     linkEntirePhrase: Boolean = false
 ) {
     val annotatedString = buildAnnotatedString {
+
+        // Unified parser that handles both HTML (Greek) and Bracket tags (Hebrew)
+        fun appendParsedText(str: String) {
+            if (str.contains("<span") || str.contains("<b>") || str.contains("<u>")) {
+                // --- HTML PARSER (For LXX) ---
+                val htmlRegex = Regex("""</?(span[^>]*|b|u)>""")
+                var currentIndex = 0
+                val styles = mutableListOf<SpanStyle>()
+
+                for (match in htmlRegex.findAll(str)) {
+                    // Append text before the tag
+                    if (match.range.first > currentIndex) {
+                        val chunk = str.substring(currentIndex, match.range.first)
+                        if (showGrammarColors && styles.isNotEmpty()) {
+                            var currentStyle = SpanStyle()
+                            styles.forEach { currentStyle = currentStyle.merge(it) }
+                            withStyle(currentStyle) { append(chunk) }
+                        } else {
+                            append(chunk)
+                        }
+                    }
+
+                    // Handle the tag itself
+                    val tag = match.value
+                    if (tag.startsWith("</")) {
+                        if (styles.isNotEmpty()) styles.removeAt(styles.lastIndex)
+                    } else {
+                        when {
+                            tag.startsWith("<span") -> {
+                                val colorStr = Regex("""color:([a-z]+)""").find(tag)?.groupValues?.get(1)
+                                val color = when (colorStr) {
+                                    "red" -> Color(0xFFD32F2F)
+                                    "blue" -> Color(0xFF1976D2)
+                                    "green" -> Color(0xFF388E3C)
+                                    else -> Color.Unspecified
+                                }
+                                styles.add(SpanStyle(color = color))
+                            }
+                            tag == "<b>" -> styles.add(SpanStyle(fontWeight = FontWeight.Bold))
+                            tag == "<u>" -> styles.add(SpanStyle(textDecoration = TextDecoration.Underline))
+                        }
+                    }
+                    currentIndex = match.range.last + 1
+                }
+
+                // Append remaining text
+                if (currentIndex < str.length) {
+                    val chunk = str.substring(currentIndex)
+                    if (showGrammarColors && styles.isNotEmpty()) {
+                        var currentStyle = SpanStyle()
+                        styles.forEach { currentStyle = currentStyle.merge(it) }
+                        withStyle(currentStyle) { append(chunk) }
+                    } else {
+                        append(chunk)
+                    }
+                }
+            } else {
+                // --- BRACKET PARSER (For Hebrew) ---
+                val grammarRegex = Regex("""\[([a-z_]+)](.*?)\[/\1]""")
+                var localLastIndex = 0
+                for (match in grammarRegex.findAll(str)) {
+                    append(str.substring(localLastIndex, match.range.first))
+                    val tag = match.groupValues[1]
+                    val content = match.groupValues[2]
+
+                    if (showGrammarColors) {
+                        val color = when (tag) {
+                            "n" -> Color(0xFF1976D2) // Blue
+                            "v", "v_imp", "ptc" -> Color(0xFFD32F2F) // Red
+                            "prep" -> Color(0xFF388E3C) // Green
+                            "conj" -> Color(0xFFF57C00) // Orange
+                            "a" -> Color(0xFF7B1FA2) // Purple
+                            "adv" -> Color(0xFF0097A7) // Cyan
+                            else -> Color.Unspecified
+                        }
+                        withStyle(SpanStyle(color = color)) {
+                            append(content)
+                        }
+                    } else {
+                        append(content)
+                    }
+                    localLastIndex = match.range.last + 1
+                }
+                if (localLastIndex < str.length) {
+                    append(str.substring(localLastIndex))
+                }
+            }
+        }
+
         var lastIndex = 0
 
         for (match in footnoteRegex.findAll(text)) {
@@ -1033,7 +1217,7 @@ fun FormattedTextWithFootnotes(
 
                 when (footnoteStyle) {
                     FootnoteStyle.BRACKETED -> {
-                        append(fullPhrase)
+                        appendParsedText(fullPhrase)
                         append(trailingSpaces)
                         pushLink(link)
                         withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 0.7.em, baselineShift = BaselineShift.Superscript)) {
@@ -1047,14 +1231,14 @@ fun FormattedTextWithFootnotes(
                             withStyle(SpanStyle(fontStyle = FontStyle.Italic, fontSize = 0.7.em, baselineShift = BaselineShift.Superscript)) {
                                 append(marker)
                             }
-                            append(fullPhrase)
+                            appendParsedText(fullPhrase)
                         }
                         pop()
                         append(trailingSpaces)
                     }
                     FootnoteStyle.HIDDEN -> {
                         pushLink(link)
-                        append(fullPhrase)
+                        appendParsedText(fullPhrase)
                         pop()
                         append(trailingSpaces)
                     }
@@ -1063,17 +1247,33 @@ fun FormattedTextWithFootnotes(
                 val trimmedPreceding = precedingText.trimEnd()
                 val trailingSpaces = precedingText.substring(trimmedPreceding.length)
 
-                val lastSpace = trimmedPreceding.lastIndexOf(' ')
+                // SMART SPACE FINDER: Ignores spaces inside HTML or Bracket tags
+                var lastSpace = -1
+                var insideHtml = false
+                var insideBracket = false
+                for (i in trimmedPreceding.indices) {
+                    val c = trimmedPreceding[i]
+                    when (c) {
+                        '<' -> insideHtml = true
+                        '>' -> insideHtml = false
+                        '[' -> insideBracket = true
+                        ']' -> insideBracket = false
+                        ' ' if !insideHtml && !insideBracket -> {
+                            lastSpace = i
+                        }
+                    }
+                }
+
                 val targetStartIndex = if (lastSpace == -1) 0 else lastSpace + 1
 
                 val beforeTarget = trimmedPreceding.substring(0, targetStartIndex)
                 val targetWord = trimmedPreceding.substring(targetStartIndex)
 
-                append(beforeTarget)
+                appendParsedText(beforeTarget)
 
                 when (footnoteStyle) {
                     FootnoteStyle.BRACKETED -> {
-                        append(targetWord)
+                        appendParsedText(targetWord)
                         append(trailingSpaces)
                         pushLink(link)
                         withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 0.7.em, baselineShift = BaselineShift.Superscript)) {
@@ -1087,14 +1287,14 @@ fun FormattedTextWithFootnotes(
                             withStyle(SpanStyle(fontStyle = FontStyle.Italic, fontSize = 0.7.em, baselineShift = BaselineShift.Superscript)) {
                                 append(marker)
                             }
-                            append(targetWord)
+                            appendParsedText(targetWord)
                         }
                         pop()
                         append(trailingSpaces)
                     }
                     FootnoteStyle.HIDDEN -> {
                         pushLink(link)
-                        append(targetWord)
+                        appendParsedText(targetWord)
                         pop()
                         append(trailingSpaces)
                     }
@@ -1104,7 +1304,7 @@ fun FormattedTextWithFootnotes(
         }
 
         if (lastIndex < text.length) {
-            append(text.substring(lastIndex))
+            appendParsedText(text.substring(lastIndex))
         }
     }
 
@@ -1120,11 +1320,11 @@ fun ChapterRenderer(
     chapter: ChapterData,
     footnoteStyle: FootnoteStyle,
     fontSizeOption: FontSizeOption,
+    showGrammarColors: Boolean,
     onFootnoteClick: (String) -> Unit
 ) {
     val scale = fontSizeOption.scale
 
-    // LazyColumn handles rendering blocks like Psalm 119 dynamically and smoothly
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp)
@@ -1134,6 +1334,7 @@ fun ChapterRenderer(
                 FormattedTextWithFootnotes(
                     text = "${chapter.book} ${chapter.chapter} ${chapter.chapterFootnote}",
                     footnoteStyle = footnoteStyle,
+                    showGrammarColors = showGrammarColors,
                     onFootnoteClick = onFootnoteClick,
                     textStyle = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Bold,
@@ -1173,6 +1374,7 @@ fun ChapterRenderer(
                     FormattedTextWithFootnotes(
                         text = item.text ?: "",
                         footnoteStyle = footnoteStyle,
+                        showGrammarColors = showGrammarColors,
                         onFootnoteClick = onFootnoteClick,
                         textStyle = MaterialTheme.typography.bodyLarge.copy(
                             fontWeight = FontWeight.Bold,
@@ -1205,13 +1407,14 @@ fun ChapterRenderer(
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier
                                 .padding(end = 8.dp, top = (4 * scale).dp)
-                                .width((28 * scale).dp) // Expanded to support 3-digit verses like Psalm 119
+                                .width((28 * scale).dp)
                         )
                         Column {
                             item.lines?.forEach { line ->
                                 FormattedTextWithFootnotes(
                                     text = line.text,
                                     footnoteStyle = footnoteStyle,
+                                    showGrammarColors = showGrammarColors,
                                     onFootnoteClick = onFootnoteClick,
                                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                                         fontSize = (16 * scale).sp,
@@ -1279,7 +1482,6 @@ fun ParticleExplosion(modifier: Modifier = Modifier, onFinished: () -> Unit) {
     }
 
     Canvas(modifier = modifier) {
-        // Read the frame state to force the Canvas to redraw every single tick
         val currentFrame = frame
 
         val w = size.width
@@ -1289,7 +1491,6 @@ fun ParticleExplosion(modifier: Modifier = Modifier, onFinished: () -> Unit) {
                 translate(left = p.x * w, top = p.y * h)
                 rotate(p.rotation)
             }) {
-                // Use the frame count to calculate a nice fade-out effect!
                 val alpha = 1f - (currentFrame / 120f)
                 drawRect(color = p.color.copy(alpha = alpha.coerceIn(0f, 1f)), size = Size(24f, 24f))
             }
