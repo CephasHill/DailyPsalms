@@ -15,7 +15,7 @@ android {
         applicationId = "com.peter.dailypsalms"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
+        versionCode = 4
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -64,9 +64,9 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
-    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.google.code.gson:gson:2.14.0")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
-    implementation("androidx.glance:glance-appwidget:1.1.0")
-    implementation("com.android.billingclient:billing-ktx:6.2.1")
+    implementation("androidx.datastore:datastore-preferences:1.2.1")
+    implementation("androidx.glance:glance-appwidget:1.1.1")
+    implementation("com.android.billingclient:billing-ktx:9.1.0")
 }
