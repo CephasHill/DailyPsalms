@@ -80,6 +80,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -116,6 +117,7 @@ import kotlin.time.Duration.Companion.minutes
 @Composable
 fun AboutScreen(
     billingManager: BillingManager,
+    onReplayTutorial: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -131,7 +133,7 @@ fun AboutScreen(
     ) {
         item {
             Icon(
-                imageVector = Icons.Default.Book,
+                painter = painterResource(id = R.drawable.ic_kinnor), // Uses painter parameter
                 contentDescription = "Logo",
                 modifier = Modifier.size(72.dp).padding(top = 24.dp),
                 tint = MaterialTheme.colorScheme.primary
@@ -156,6 +158,31 @@ fun AboutScreen(
 
         item {
             TranslationsInfoSection(context)
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text(
+                        text = "App Settings & Help",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    TextButton(
+                        onClick = onReplayTutorial,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Replay App Tour")
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(32.dp))
         }
 
@@ -272,7 +299,34 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             DailyPsalmsTheme {
-                MainAppContainer()
+                val context = LocalContext.current
+                val prefs by context.dataStore.data.collectAsState(initial = null)
+                val coroutineScope = rememberCoroutineScope()
+
+                // Wait for DataStore to load to prevent flashing the wrong screen
+                if (prefs != null) {
+                    val hasSeenOnboardingKey = booleanPreferencesKey("has_seen_onboarding")
+                    val hasSeen = prefs!![hasSeenOnboardingKey] ?: false
+
+                    if (hasSeen) {
+                        MainAppContainer()
+                    } else {
+                        OnboardingScreen(
+                            onFinish = {
+                                coroutineScope.launch {
+                                    context.dataStore.edit { p ->
+                                        p[hasSeenOnboardingKey] = true
+                                    }
+                                }
+                            }
+                        )
+                    }
+                } else {
+                    // Show a simple loading state while checking preferences
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
             }
         }
     }
@@ -304,12 +358,14 @@ fun MainAppContainer() {
     val last100DateKey = stringPreferencesKey("last_100_date") // Standardized
     val legacyLast100DateKey = stringPreferencesKey("last_100Date_key") // Fallback
     val streakKey = intPreferencesKey("streak")
+    val hasSeenOnboardingKey = booleanPreferencesKey("has_seen_onboarding")
 
-    val preferredVersionCode = prefs[bibleVersionKey] ?: BibleVersion.KJV.code
+    // DEFAULT BIBLE VERSION
+    val preferredVersionCode = prefs[bibleVersionKey] ?: BibleVersion.BSB.code
     val safeVersionCode = if (isAssetExists(context, "psalms_$preferredVersionCode.json")) {
         preferredVersionCode
     } else {
-        BibleVersion.KJV.code
+        BibleVersion.BSB.code
     }
 
     val currentBibleVersion = BibleVersion.entries.find { it.code == safeVersionCode } ?: BibleVersion.WEB
@@ -601,6 +657,13 @@ fun MainAppContainer() {
                     is NavigationTab.About -> {
                         AboutScreen(
                             billingManager = billingManager,
+                            onReplayTutorial = {
+                                coroutineScope.launch {
+                                    context.dataStore.edit { p ->
+                                        p[hasSeenOnboardingKey] = false
+                                    }
+                                }
+                            },
                             modifier = Modifier.padding(innerPadding)
                         )
                     }
@@ -947,7 +1010,13 @@ fun ActiveChapterReaderScreen(
                         Text("← Back")
                     }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .weight(1f)
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.End
+                    ) {
                         if (readerContext.isDailyMode) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -1530,7 +1599,7 @@ data class Particle(
 @Composable
 fun ParticleExplosion(modifier: Modifier = Modifier, onFinished: () -> Unit) {
     val particles = remember {
-        List(150) {
+        List(250) {
             Particle(
                 x = 0.5f,
                 y = 0.4f,
@@ -1576,4 +1645,128 @@ fun ParticleExplosion(modifier: Modifier = Modifier, onFinished: () -> Unit) {
             }
         }
     }
+}
+
+@Composable
+fun OnboardingScreen(onFinish: () -> Unit) {
+    val pagerState = rememberPagerState(pageCount = { 4 })
+    val coroutineScope = rememberCoroutineScope()
+
+    Scaffold(
+        bottomBar = {
+            Surface(tonalElevation = 8.dp) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .padding(bottom = 24.dp), // Padding for gesture navigation bars
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Page Indicators (Dots)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        repeat(4) { index ->
+                            val color = if (pagerState.currentPage == index) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .background(color, shape = androidx.compose.foundation.shape.CircleShape)
+                            )
+                        }
+                    }
+
+                    // Navigation Button
+                    if (pagerState.currentPage == 3) {
+                        Button(onClick = onFinish) {
+                            Text("Get Started")
+                        }
+                    } else {
+                        TextButton(
+                            onClick = {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                }
+                            }
+                        ) {
+                            Text("Next")
+                        }
+                    }
+                }
+            }
+        }
+    ) { innerPadding ->
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) { page ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                when (page) {
+                    0 -> OnboardingPage(
+                        // Use painterResource for your custom local graphic
+                        iconPainter = painterResource(id = R.drawable.ic_kinnor),
+                        title = "Welcome to Daily Psalms",
+                        description = "Your distraction-free companion for reading through the books of Psalms and Proverbs every single month."
+                    )
+                    1 -> OnboardingPage(
+                        // Use rememberVectorPainter to convert the standard Material icons
+                        iconPainter = androidx.compose.ui.graphics.vector.rememberVectorPainter(image = Icons.Default.Today),
+                        title = "The Reading Plan",
+                        description = "Each day, you are assigned 1 Proverb and 5 Psalms spaced exactly 30 chapters apart.\n\nFor example, on the 5th of the month, you will read Proverbs 5 alongside Psalms 5, 35, 65, 95, and 125. (On the 31st, we pair Proverbs 31 with the 176-verse-long Psalm 119!)"
+                    )
+                    2 -> OnboardingPage(
+                        iconPainter = androidx.compose.ui.graphics.vector.rememberVectorPainter(image = Icons.Default.Info),
+                        title = "Deep Study Tools",
+                        description = "Tap the 'Version' menu to explore a vast library of translations, from the modern BSB to the ancient Greek Septuagint.\n\nFor supported texts, a 'Format' menu will automatically appear, giving you access to footnotes, grammar color-coding, and integrated lexicons."
+                    )
+                    3 -> OnboardingPage(
+                        iconPainter = androidx.compose.ui.graphics.vector.rememberVectorPainter(image = Icons.Default.Favorite),
+                        title = "Stay Consistent",
+                        description = "Build a lasting scripture habit! Track your progress with the built-in streak system, and add our Home Screen Widget to check your daily reading status at a glance."
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun OnboardingPage(
+    iconPainter: androidx.compose.ui.graphics.painter.Painter, // Changed to Painter
+    title: String,
+    description: String
+) {
+    Icon(
+        painter = iconPainter, // Changed from imageVector to painter
+        contentDescription = null,
+        modifier = Modifier
+            .size(100.dp)
+            .padding(bottom = 32.dp),
+        tint = MaterialTheme.colorScheme.primary // Your kinnor will be automatically tinted to match the theme here!
+    )
+    Text(
+        text = title,
+        style = MaterialTheme.typography.headlineMedium,
+        fontWeight = FontWeight.Bold,
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        modifier = Modifier.padding(bottom = 16.dp)
+    )
+    Text(
+        text = description,
+        style = MaterialTheme.typography.bodyLarge,
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        lineHeight = 24.sp
+    )
 }

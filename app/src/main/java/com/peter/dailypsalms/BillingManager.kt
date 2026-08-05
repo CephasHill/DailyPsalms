@@ -10,11 +10,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class BillingManager(private val context: Context) : PurchasesUpdatedListener {
+class BillingManager(context: Context) : PurchasesUpdatedListener {
 
     private val billingClient: BillingClient = BillingClient.newBuilder(context)
         .setListener(this)
-        .enablePendingPurchases()
+        .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
         .build()
 
     // These IDs MUST match exactly what you type into the Google Play Console later
@@ -54,11 +54,13 @@ class BillingManager(private val context: Context) : PurchasesUpdatedListener {
             .setProductList(productList)
             .build()
 
-        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
+        billingClient.queryProductDetailsAsync(params
+        ) // <-- Accept the new wrapper object!
+        { billingResult, queryResult ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                // Sort by price so they appear in order (e.g., $1, $3, $5)
-                _products.value = productDetailsList.sortedBy {
-                    it.oneTimePurchaseOfferDetails?.priceAmountMicros
+                // Extract the list from the wrapper using .productDetailsList before sorting
+                _products.value = queryResult.productDetailsList.sortedBy {
+                    it.oneTimePurchaseOfferDetails?.priceAmountMicros ?: 0L
                 }
             }
         }
