@@ -8,6 +8,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Canvas
@@ -75,7 +77,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.withTransform
@@ -111,6 +117,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import kotlin.math.abs
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.minutes
 
@@ -1474,8 +1481,16 @@ fun ChapterRenderer(
 ) {
     val scale = fontSizeOption.scale
 
+    val listState = rememberLazyListState()
+
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        state = listState,
+        modifier = Modifier
+            .fillMaxSize()
+            .simpleVerticalScrollbar(
+                state = listState,
+                baseColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+            ),
         contentPadding = PaddingValues(16.dp)
     ) {
         item {
@@ -1769,4 +1784,56 @@ fun OnboardingPage(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         lineHeight = 24.sp
     )
+}
+
+fun Modifier.simpleVerticalScrollbar(
+    state: androidx.compose.foundation.lazy.LazyListState,
+    width: androidx.compose.ui.unit.Dp = 4.dp,
+    baseColor: Color = Color.Gray
+): Modifier = composed {
+    // 1. Track whether the list is currently moving
+    val targetAlpha = if (state.isScrollInProgress) 0.5f else 0f
+    val duration = if (state.isScrollInProgress) 150 else 500
+
+    // 2. Animate the fade smoothly
+    val alpha by animateFloatAsState(
+        targetValue = targetAlpha,
+        animationSpec = tween(durationMillis = duration),
+        label = "scrollbar_alpha"
+    )
+
+    drawWithContent {
+        drawContent()
+
+        // 3. Only calculate and draw the bar if it's actually visible
+        if (alpha > 0f) {
+            val firstVisibleElementIndex = state.layoutInfo.visibleItemsInfo.firstOrNull()?.index
+
+            if (firstVisibleElementIndex != null && state.layoutInfo.totalItemsCount > state.layoutInfo.visibleItemsInfo.size) {
+                val totalItemsCount = state.layoutInfo.totalItemsCount
+                val visibleItemsInfo = state.layoutInfo.visibleItemsInfo
+
+                val firstItem = visibleItemsInfo.first()
+                val firstItemOffset = firstItem.offset
+                val firstItemSize = firstItem.size
+
+                val fractionalFirstIndex = if (firstItemSize > 0) {
+                    firstVisibleElementIndex + (abs(firstItemOffset).toFloat() / firstItemSize.toFloat())
+                } else {
+                    firstVisibleElementIndex.toFloat()
+                }
+
+                val scrollPercentage = fractionalFirstIndex / totalItemsCount.toFloat()
+                val scrollbarHeight = size.height * (visibleItemsInfo.size.toFloat() / totalItemsCount.toFloat())
+                val scrollbarY = (scrollPercentage * size.height).coerceIn(0f, size.height - scrollbarHeight)
+
+                drawRoundRect(
+                    color = baseColor.copy(alpha = alpha), // Apply the animated alpha here
+                    topLeft = Offset(size.width - width.toPx(), scrollbarY),
+                    size = Size(width.toPx(), scrollbarHeight),
+                    cornerRadius = CornerRadius(width.toPx() / 2, width.toPx() / 2)
+                )
+            }
+        }
+    }
 }
