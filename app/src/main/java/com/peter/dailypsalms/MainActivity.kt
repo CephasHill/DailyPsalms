@@ -277,6 +277,7 @@ enum class BibleVersion(val code: String, val displayName: String, val descripti
     BSB("bsb", "BSB", "Berean Standard Bible (2016). A modern translation that balances strict accuracy to the original texts with high readability."),
     DARBY("darby", "Darby", "Darby Translation (1890). A literal translation by John Nelson Darby, known for its careful attention to original Greek and Hebrew nuances."),
     DRA("dra", "Douay-Rheims", "Douay-Rheims American Edition (1899). The traditional English Catholic Bible, translated directly from the Latin Vulgate."),
+    GNV("gnv", "Geneva", "Geneva Bible (1599). The Bible of the Protestant Reformation, famous for its extensive historical and theological study notes."),
     JPS("jps", "JPS Tanakh", "Jewish Publication Society (1917). The classic English translation of the Hebrew Bible, reflecting traditional Jewish scholarship."),
     KJV("kjv", "KJV", "King James Version (1611). The most influential English translation in history, known for its majestic and poetic language."),
     NABRE("nabre", "NABRE", "New American Bible Revised Edition (2011). The modern English translation used in the Catholic liturgy in the United States."),
@@ -1368,13 +1369,12 @@ fun FormattedTextWithFootnotes(
             val link = LinkAnnotation.Clickable(marker, styles = linkStyles) { _ -> onFootnoteClick(marker) }
 
             if (linkEntirePhrase) {
+                // We simply trim the spaces completely so the footnote snaps to the word
                 val fullPhrase = precedingText.trimEnd()
-                val trailingSpaces = precedingText.substring(fullPhrase.length)
 
                 when (footnoteStyle) {
                     FootnoteStyle.BRACKETED -> {
                         appendParsedText(fullPhrase)
-                        append(trailingSpaces)
                         pushLink(link)
                         withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 0.7.em, baselineShift = BaselineShift.Superscript)) {
                             append("[$marker]")
@@ -1390,18 +1390,15 @@ fun FormattedTextWithFootnotes(
                             appendParsedText(fullPhrase)
                         }
                         pop()
-                        append(trailingSpaces)
                     }
                     FootnoteStyle.HIDDEN -> {
                         pushLink(link)
                         appendParsedText(fullPhrase)
                         pop()
-                        append(trailingSpaces)
                     }
                 }
             } else {
                 val trimmedPreceding = precedingText.trimEnd()
-                val trailingSpaces = precedingText.substring(trimmedPreceding.length)
 
                 // SMART SPACE FINDER: Ignores spaces inside HTML or Bracket tags
                 var lastSpace = -1
@@ -1430,7 +1427,6 @@ fun FormattedTextWithFootnotes(
                 when (footnoteStyle) {
                     FootnoteStyle.BRACKETED -> {
                         appendParsedText(targetWord)
-                        append(trailingSpaces)
                         pushLink(link)
                         withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 0.7.em, baselineShift = BaselineShift.Superscript)) {
                             append("[$marker]")
@@ -1446,13 +1442,11 @@ fun FormattedTextWithFootnotes(
                             appendParsedText(targetWord)
                         }
                         pop()
-                        append(trailingSpaces)
                     }
                     FootnoteStyle.HIDDEN -> {
                         pushLink(link)
                         appendParsedText(targetWord)
                         pop()
-                        append(trailingSpaces)
                     }
                 }
             }
@@ -1525,6 +1519,16 @@ fun ChapterRenderer(
 
         items(chapter.content) { item ->
             when (item.type) {
+                "chapter_summary" -> {
+                    Text(
+                        text = item.text ?: "",
+                        fontStyle = FontStyle.Italic,
+                        fontSize = (15 * scale).sp,
+                        lineHeight = (22 * scale).sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, // Makes it slightly softer than main text
+                        modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
+                    )
+                }
                 "book_division" -> {
                     Text(
                         text = item.text ?: "",
