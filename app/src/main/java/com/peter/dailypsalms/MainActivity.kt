@@ -275,14 +275,11 @@ enum class FootnoteStyle(val displayName: String) {
 enum class BibleVersion(val code: String, val displayName: String, val description: String) {
     ASV("asv", "ASV", "American Standard Version (1901). A highly literal, word-for-word translation rooted in the King James tradition."),
     BSB("bsb", "BSB", "Berean Standard Bible (2016). A modern translation that balances strict accuracy to the original texts with high readability."),
-    DARBY("darby", "Darby", "Darby Translation (1890). A literal translation by John Nelson Darby, known for its careful attention to original Greek and Hebrew nuances."),
     DRA("dra", "Douay-Rheims", "Douay-Rheims American Edition (1899). The traditional English Catholic Bible, translated directly from the Latin Vulgate."),
     GNV("gnv", "Geneva", "Geneva Bible (1599). The Bible of the Protestant Reformation, famous for its extensive historical and theological study notes."),
-    JPS("jps", "JPS Tanakh", "Jewish Publication Society (1917). The classic English translation of the Hebrew Bible, reflecting traditional Jewish scholarship."),
     KJV("kjv", "KJV", "King James Version (1611). The most influential English translation in history, known for its majestic and poetic language."),
     NABRE("nabre", "NABRE", "New American Bible Revised Edition (2011). The modern English translation used in the Catholic liturgy in the United States."),
     WEB("web", "WEB", "World English Bible (2000). A modern, public-domain update to the ASV, prioritizing clear contemporary English."),
-    YLT("ylt", "YLT", "Young's Literal Translation (1898). A strictly literal translation that strictly preserves the original Hebrew and Greek verb tenses."),
     HEB("heb", "WLC (Hebrew)", "Westminster Leningrad Codex. The oldest complete manuscript of the Hebrew Bible, serving as the definitive source text."),
     LXX("lxx", "LXX (Greek)", "The Septuagint. The ancient Greek translation of the Old Testament, widely used by the early Christian Church."),
     VULGATE("vulgate", "Vulgate (Latin)", "The Clementine Vulgate. The historic Latin translation of the Bible that served as the standard for the Western Church for over a millennium.")
