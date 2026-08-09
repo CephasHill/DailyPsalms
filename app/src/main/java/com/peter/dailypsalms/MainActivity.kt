@@ -285,6 +285,7 @@ enum class BibleVersion(val code: String, val displayName: String, val descripti
     GNV("gnv", "Geneva", "Geneva Bible (1599). The Bible of the Protestant Reformation, famous for its extensive historical and theological study notes.", BibleCategory.HISTORICAL),
     KJV("kjv", "KJV", "King James Version (1611). The most influential English translation in history, known for its majestic and poetic language.", BibleCategory.HISTORICAL),
     NABRE("nabre", "NABRE", "New American Bible Revised Edition (2011). The modern English translation used in the Catholic liturgy in the United States.", BibleCategory.MODERN),
+    NET("net", "NET", "New English Translation (2005). A modern, highly readable translation renowned for its transparency and extensive translator's notes.", BibleCategory.MODERN),
     WEB("web", "WEB", "World English Bible (2000). A modern, public-domain update to the ASV, prioritizing clear contemporary English.", BibleCategory.MODERN),
     HEB("heb", "WLC (Hebrew)", "Westminster Leningrad Codex. The oldest complete manuscript of the Hebrew Bible, serving as the definitive source text.", BibleCategory.ANCIENT),
     LXX("lxx", "LXX (Greek)", "The Septuagint. The ancient Greek translation of the Old Testament, widely used by the early Christian Church.", BibleCategory.ANCIENT),
@@ -744,12 +745,28 @@ fun TranslationsInfoSection(context: Context) {
                             )
 
                             AnimatedVisibility(visible = isExpanded) {
-                                Text(
-                                    text = version.description,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(top = 8.dp)
-                                )
+                                Column {
+                                    Text(
+                                        text = version.description,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(top = 8.dp)
+                                    )
+
+                                    // Custom footnote legend exclusively for the NET Bible
+                                    if (version.code == "net") {
+                                        Text(
+                                            text = "Footnote Guide:\n" +
+                                                    "• tn (Translator's Note): Explains translation decisions, grammar, and literal phrasing.\n" +
+                                                    "• sn (Study Note): Provides historical, theological, or cultural context.\n" +
+                                                    "• tc (Text-Critical Note): Discusses ancient manuscript variations.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                            lineHeight = 18.sp,
+                                            modifier = Modifier.padding(top = 12.dp, start = 8.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
 
