@@ -272,17 +272,23 @@ enum class FootnoteStyle(val displayName: String) {
     HIDDEN("Hidden")
 }
 
-enum class BibleVersion(val code: String, val displayName: String, val description: String) {
-    ASV("asv", "ASV", "American Standard Version (1901). A highly literal, word-for-word translation rooted in the King James tradition."),
-    BSB("bsb", "BSB", "Berean Standard Bible (2016). A modern translation that balances strict accuracy to the original texts with high readability."),
-    DRA("dra", "Douay-Rheims", "Douay-Rheims American Edition (1899). The traditional English Catholic Bible, translated directly from the Latin Vulgate."),
-    GNV("gnv", "Geneva", "Geneva Bible (1599). The Bible of the Protestant Reformation, famous for its extensive historical and theological study notes."),
-    KJV("kjv", "KJV", "King James Version (1611). The most influential English translation in history, known for its majestic and poetic language."),
-    NABRE("nabre", "NABRE", "New American Bible Revised Edition (2011). The modern English translation used in the Catholic liturgy in the United States."),
-    WEB("web", "WEB", "World English Bible (2000). A modern, public-domain update to the ASV, prioritizing clear contemporary English."),
-    HEB("heb", "WLC (Hebrew)", "Westminster Leningrad Codex. The oldest complete manuscript of the Hebrew Bible, serving as the definitive source text."),
-    LXX("lxx", "LXX (Greek)", "The Septuagint. The ancient Greek translation of the Old Testament, widely used by the early Christian Church."),
-    VULGATE("vulgate", "Vulgate (Latin)", "The Clementine Vulgate. The historic Latin translation of the Bible that served as the standard for the Western Church for over a millennium.")
+enum class BibleCategory(val displayName: String) {
+    MODERN("Modern"),
+    HISTORICAL("Historical"),
+    ANCIENT("Original Languages")
+}
+
+enum class BibleVersion(val code: String, val displayName: String, val description: String, val category: BibleCategory) {
+    ASV("asv", "ASV", "American Standard Version (1901). A highly literal, word-for-word translation rooted in the King James tradition.", BibleCategory.HISTORICAL),
+    BSB("bsb", "BSB", "Berean Standard Bible (2016). A modern translation that balances strict accuracy to the original texts with high readability.", BibleCategory.MODERN),
+    DRA("dra", "Douay-Rheims", "Douay-Rheims American Edition (1899). The traditional English Catholic Bible, translated directly from the Latin Vulgate.", BibleCategory.HISTORICAL),
+    GNV("gnv", "Geneva", "Geneva Bible (1599). The Bible of the Protestant Reformation, famous for its extensive historical and theological study notes.", BibleCategory.HISTORICAL),
+    KJV("kjv", "KJV", "King James Version (1611). The most influential English translation in history, known for its majestic and poetic language.", BibleCategory.HISTORICAL),
+    NABRE("nabre", "NABRE", "New American Bible Revised Edition (2011). The modern English translation used in the Catholic liturgy in the United States.", BibleCategory.MODERN),
+    WEB("web", "WEB", "World English Bible (2000). A modern, public-domain update to the ASV, prioritizing clear contemporary English.", BibleCategory.MODERN),
+    HEB("heb", "WLC (Hebrew)", "Westminster Leningrad Codex. The oldest complete manuscript of the Hebrew Bible, serving as the definitive source text.", BibleCategory.ANCIENT),
+    LXX("lxx", "LXX (Greek)", "The Septuagint. The ancient Greek translation of the Old Testament, widely used by the early Christian Church.", BibleCategory.ANCIENT),
+    VULGATE("vulgate", "Vulgate (Latin)", "The Clementine Vulgate. The historic Latin translation of the Bible that served as the standard for the Western Church for over a millennium.", BibleCategory.ANCIENT)
 }
 
 sealed class NavigationTab {
@@ -693,6 +699,9 @@ fun TranslationsInfoSection(context: Context) {
         }
     }
 
+    // Group the versions by their category
+    val groupedVersions = availableVersions.groupBy { it.category }
+
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -703,41 +712,52 @@ fun TranslationsInfoSection(context: Context) {
             modifier = Modifier.padding(bottom = 12.dp)
         )
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                availableVersions.forEachIndexed { index, version ->
-                    var isExpanded by remember { mutableStateOf(false) }
+        // Iterate through each category and its associated list of versions
+        groupedVersions.forEach { (category, versions) ->
+            Text(
+                text = category.displayName,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 8.dp, bottom = 8.dp, start = 4.dp)
+            )
 
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { isExpanded = !isExpanded }
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = version.displayName,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    versions.forEachIndexed { index, version ->
+                        var isExpanded by remember { mutableStateOf(false) }
 
-                        AnimatedVisibility(visible = isExpanded) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { isExpanded = !isExpanded }
+                                .padding(16.dp)
+                        ) {
                             Text(
-                                text = version.description,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 8.dp)
+                                text = version.displayName,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            AnimatedVisibility(visible = isExpanded) {
+                                Text(
+                                    text = version.description,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 8.dp)
+                                )
+                            }
+                        }
+
+                        if (index < versions.size - 1) {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
                             )
                         }
-                    }
-
-                    if (index < availableVersions.size - 1) {
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
-                        )
                     }
                 }
             }
@@ -1085,20 +1105,39 @@ fun ActiveChapterReaderScreen(
                                         isAssetExists(context, "psalms_${version.code}.json")
                                     }
                                 }
-                                availableVersions.forEach { version ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = version.displayName,
-                                                fontWeight = if (version == currentBibleVersion) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (version == currentBibleVersion) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                            )
-                                        },
-                                        onClick = {
-                                            onBibleVersionChange(version, pagerState.currentPage)
-                                            versionMenuExpanded = false
-                                        }
+
+                                val groupedVersions = availableVersions.groupBy { it.category }
+                                val categoryList = groupedVersions.keys.toList()
+
+                                groupedVersions.forEach { (category, versions) ->
+                                    // Category Header
+                                    Text(
+                                        text = category.displayName,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                                     )
+
+                                    versions.forEach { version ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    text = version.displayName,
+                                                    fontWeight = if (version == currentBibleVersion) FontWeight.Bold else FontWeight.Normal,
+                                                    color = if (version == currentBibleVersion) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                                )
+                                            },
+                                            onClick = {
+                                                onBibleVersionChange(version, pagerState.currentPage)
+                                                versionMenuExpanded = false
+                                            }
+                                        )
+                                    }
+
+                                    // Add a visual divider between categories, just like in the Format menu
+                                    if (category != categoryList.last()) {
+                                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                    }
                                 }
                             }
                         }
