@@ -6,7 +6,7 @@ plugins {
 android {
     namespace = "com.peter.dailypsalms"
     compileSdk {
-        version = release(36) {
+        version = release(37) {
             minorApiLevel = 1
         }
     }
@@ -14,9 +14,8 @@ android {
     defaultConfig {
         applicationId = "com.peter.dailypsalms"
         minSdk = 26
-        //noinspection OldTargetApi
-        targetSdk = 36
-        versionCode = 5
+        targetSdk = 37
+        versionCode = 6
         versionName = "1.0.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
