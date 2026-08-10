@@ -74,7 +74,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -1686,17 +1686,35 @@ fun ParticleExplosion(modifier: Modifier = Modifier, onFinished: () -> Unit) {
 
     var frame by remember { mutableIntStateOf(0) }
 
+    // You can keep your var frame by remember { mutableIntStateOf(0) } as it was
+
     LaunchedEffect(Unit) {
-        while (frame < 120) {
-            withFrameNanos {
+        var lastTime = withFrameMillis { it }
+        var elapsedTime = 0L
+        val animationDurationMs = 3000L // Lock the explosion to exactly 3 seconds
+
+        while (elapsedTime < animationDurationMs) {
+            withFrameMillis { currentTime ->
+                // 1. Calculate how much time passed since the last frame
+                val deltaMs = currentTime - lastTime
+                lastTime = currentTime
+                elapsedTime += deltaMs
+
+                // 2. Normalize the speed. 16.6ms is one frame at 60fps.
+                // Multiplying by 0.4f globally slows down the physical speed of the particles!
+                val timeStep = (deltaMs / 16.6f) * 0.4f
+
                 for (p in particles) {
-                    p.x += p.vx
-                    p.y += p.vy
-                    p.vy += 0.004f
-                    p.vx *= 0.98f
-                    p.rotation += p.rotationSpeed
+                    p.x += p.vx * timeStep
+                    p.y += p.vy * timeStep
+                    p.vy += 0.004f * timeStep
+                    p.vx *= (1f - (0.02f * timeStep)) // Adjusted friction
+                    p.rotation += p.rotationSpeed * timeStep
                 }
-                frame++
+
+                // 3. Update your original 'frame' state from 0 to 120 based on time
+                // This ensures your Canvas alpha fading logic below still works perfectly
+                frame = ((elapsedTime.toFloat() / animationDurationMs) * 120).toInt()
             }
         }
         onFinished()
