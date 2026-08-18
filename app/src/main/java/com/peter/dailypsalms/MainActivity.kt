@@ -490,7 +490,7 @@ data class DailyReading(
     val chapterData: ChapterData,
     val assignedDate: LocalDate,
     val isCatchUp: Boolean,
-    val partId: Int? = null // NEW
+    val partId: Int? = null
 ) {
     val uniqueKey: String get() = "${chapterData.normalizedBook}_${chapterData.chapter}${if (partId != null) "_part$partId" else ""}_$assignedDate"
 }
@@ -503,7 +503,7 @@ fun getAssignedChapters(date: LocalDate, track: ReadingTrack): List<AssignedChap
     when (track) {
         ReadingTrack.CLASSIC -> {
             if (dayOfMonth == 31) {
-                // NEW: Request 5 specific chunks instead of 1 chapter
+                // Request 5 specific chunks instead of 1 chapter
                 list.add(AssignedChapter("Psalms", 119, date, partId = 1))
                 list.add(AssignedChapter("Psalms", 119, date, partId = 2))
                 list.add(AssignedChapter("Psalms", 119, date, partId = 3))
@@ -653,6 +653,7 @@ fun MainAppContainer() {
     val graceDayKey = stringPreferencesKey("grace_day")
     val hasSeenOnboardingKey = booleanPreferencesKey("has_seen_onboarding")
     val planStartDateKey = stringPreferencesKey("plan_start_date")
+    val showHeadingsKey = booleanPreferencesKey("show_headings")
 
     // Read the current states (with defaults)
     val currentTrack = try {
@@ -715,7 +716,6 @@ fun MainAppContainer() {
         }.toList()
     }
 
-    // --- MOVED UP: We read your completed chapters here so we can filter the playlist ---
     val checkmarksDate = prefs[checkmarksDateKey] ?: ""
     val rawCompletedChapters = if (checkmarksDate == cycleStartStr) {
         prefs[completedChaptersKey] ?: emptySet()
@@ -725,7 +725,6 @@ fun MainAppContainer() {
 
     var todayPlaylist by remember { mutableStateOf<List<DailyReading>>(emptyList()) }
 
-    // (Added todayStr to keys so it safely refreshes at midnight!)
     LaunchedEffect(currentBibleVersion, currentTrack, currentGraceDay, todayStr) {
         isLoading = true
         withContext(Dispatchers.IO) {
@@ -778,8 +777,16 @@ fun MainAppContainer() {
 
                 // Keep reader context stable if it was already open
                 readerContext?.let { oldContext ->
+                    val newPlaylist = if (oldContext.isDailyMode) {
+                        generatedPlaylist.map { it.chapterData }
+                    } else {
+                        // Check if the Library was looking at Psalms or Proverbs, and grab the NEW version's list!
+                        val isPsalms = oldContext.playlist.firstOrNull()?.normalizedBook == "Psalms"
+                        if (isPsalms) loadedPsalms else loadedProverbs
+                    }
+
                     readerContext = oldContext.copy(
-                        playlist = if (oldContext.isDailyMode) generatedPlaylist.map { it.chapterData } else oldContext.playlist,
+                        playlist = newPlaylist,
                         dailyKeys = if (oldContext.isDailyMode) generatedPlaylist.map { it.uniqueKey } else null
                     )
                 }
@@ -813,6 +820,7 @@ fun MainAppContainer() {
     } catch (_: Exception) { FontSizeOption.MEDIUM }
 
     val currentShowGrammar = prefs[showGrammarColorsKey] ?: true
+    val currentShowHeadings = prefs[showHeadingsKey] ?: true
 
     // Recover date from either key structure to ensure synchronization with the widget
     val last100Date = prefs[last100DateKey] ?: prefs[legacyLast100DateKey] ?: ""
@@ -927,6 +935,10 @@ fun MainAppContainer() {
                 coroutineScope.launch { context.dataStore.edit { p -> p[showGrammarColorsKey] = show } }
             }
 
+            val updateShowHeadings = { show: Boolean ->
+                coroutineScope.launch { context.dataStore.edit { p -> p[showHeadingsKey] = show } }
+            }
+
             val updateBibleVersion = { version: BibleVersion ->
                 coroutineScope.launch {
                     context.dataStore.edit { p ->
@@ -962,6 +974,7 @@ fun MainAppContainer() {
                     currentBibleVersion = currentBibleVersion,
                     currentFontSize = currentFontSizeOption,
                     showGrammarColors = currentShowGrammar,
+                    showHeadings = currentShowHeadings,
                     onFootnoteStyleChange = { updateFootnoteStyle(it) },
                     onBibleVersionChange = { version, currentPage ->
                         readerContext = readerContext?.copy(initialIndex = currentPage)
@@ -969,6 +982,7 @@ fun MainAppContainer() {
                     },
                     onFontSizeChange = { updateFontSize(it) },
                     onGrammarColorsChange = { updateGrammarColors(it) },
+                    onShowHeadingsChange = { updateShowHeadings(it) },
                     onToggleComplete = { key -> toggleChapterCompletion(key) },
                     onBack = { readerContext = null },
                     modifier = Modifier.padding(innerPadding)
@@ -1290,10 +1304,12 @@ fun ActiveChapterReaderScreen(
     currentBibleVersion: BibleVersion,
     currentFontSize: FontSizeOption,
     showGrammarColors: Boolean,
+    showHeadings: Boolean,
     onFootnoteStyleChange: (FootnoteStyle) -> Unit,
     onBibleVersionChange: (BibleVersion, Int) -> Unit,
     onFontSizeChange: (FontSizeOption) -> Unit,
     onGrammarColorsChange: (Boolean) -> Unit,
+    onShowHeadingsChange: (Boolean) -> Unit,
     onToggleComplete: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
@@ -1459,77 +1475,112 @@ fun ActiveChapterReaderScreen(
                             }
                         }
 
-                        // Format Selector Dropdown
+                        // Format Selector Dropdown (NOW ALWAYS VISIBLE!)
                         val showFootnoteOptions = hasFootnotes && currentBibleVersion != BibleVersion.HEB && currentBibleVersion != BibleVersion.LXX
-                        if (showFootnoteOptions || currentBibleVersion == BibleVersion.HEB || currentBibleVersion == BibleVersion.LXX) {
-                            Box {
-                                TextButton(
-                                    onClick = { formatMenuExpanded = true },
-                                    contentPadding = PaddingValues(horizontal = 6.dp)
-                                ) {
-                                    Text("Format ▼", fontWeight = FontWeight.Bold)
-                                }
-                                DropdownMenu(
-                                    expanded = formatMenuExpanded,
-                                    onDismissRequest = { formatMenuExpanded = false }
-                                ) {
-                                    if (showFootnoteOptions) {
-                                        Text(
-                                            text = "Footnote Style",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                                        )
-                                        FootnoteStyle.entries.forEach { style ->
-                                            DropdownMenuItem(
-                                                text = {
-                                                    Text(
-                                                        text = style.displayName,
-                                                        fontWeight = if (style == currentFootnoteStyle) FontWeight.Bold else FontWeight.Normal,
-                                                        color = if (style == currentFootnoteStyle) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                                    )
-                                                },
-                                                onClick = {
-                                                    onFootnoteStyleChange(style)
-                                                    formatMenuExpanded = false
-                                                }
-                                            )
-                                        }
-                                    }
 
-                                    if (currentBibleVersion == BibleVersion.HEB || currentBibleVersion == BibleVersion.LXX) {
-                                        if (showFootnoteOptions) {
-                                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                                        }
-                                        Text(
-                                            text = "Language Tools",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                                        )
+                        Box {
+                            TextButton(
+                                onClick = { formatMenuExpanded = true },
+                                contentPadding = PaddingValues(horizontal = 6.dp)
+                            ) {
+                                Text("Format ▼", fontWeight = FontWeight.Bold)
+                            }
+                            DropdownMenu(
+                                expanded = formatMenuExpanded,
+                                onDismissRequest = { formatMenuExpanded = false }
+                            ) {
+                                // Conditional: Only show if translation supports footnotes
+                                if (showFootnoteOptions) {
+                                    Text(
+                                        text = "Footnote Style",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                    )
+                                    FootnoteStyle.entries.forEach { style ->
                                         DropdownMenuItem(
                                             text = {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    modifier = Modifier.fillMaxWidth()
-                                                ) {
-                                                    Text("Grammar Colors")
-                                                    Spacer(modifier = Modifier.width(16.dp))
-                                                    Switch(
-                                                        checked = showGrammarColors,
-                                                        onCheckedChange = null,
-                                                        modifier = Modifier.scale(0.8f)
-                                                    )
-                                                }
+                                                Text(
+                                                    text = style.displayName,
+                                                    fontWeight = if (style == currentFootnoteStyle) FontWeight.Bold else FontWeight.Normal,
+                                                    color = if (style == currentFootnoteStyle) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                                )
                                             },
                                             onClick = {
-                                                onGrammarColorsChange(!showGrammarColors)
+                                                onFootnoteStyleChange(style)
                                                 formatMenuExpanded = false
                                             }
                                         )
                                     }
                                 }
+
+                                // Conditional: Only show if Original Languages are selected
+                                if (currentBibleVersion == BibleVersion.HEB || currentBibleVersion == BibleVersion.LXX) {
+                                    if (showFootnoteOptions) {
+                                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                    }
+                                    Text(
+                                        text = "Language Tools",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Text("Grammar Colors")
+                                                Spacer(modifier = Modifier.width(16.dp))
+                                                Switch(
+                                                    checked = showGrammarColors,
+                                                    onCheckedChange = null,
+                                                    modifier = Modifier.scale(0.8f)
+                                                )
+                                            }
+                                        },
+                                        onClick = {
+                                            onGrammarColorsChange(!showGrammarColors)
+                                            formatMenuExpanded = false
+                                        }
+                                    )
+                                }
+
+                                // Conditional visual divider if other options were generated above
+                                if (showFootnoteOptions || currentBibleVersion == BibleVersion.HEB || currentBibleVersion == BibleVersion.LXX) {
+                                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                }
+
+                                // ALWAYS VISIBLE: Layout Toggle
+                                Text(
+                                    text = "Layout",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text("Section Headings")
+                                            Spacer(modifier = Modifier.width(16.dp))
+                                            Switch(
+                                                checked = showHeadings,
+                                                onCheckedChange = null,
+                                                modifier = Modifier.scale(0.8f)
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        onShowHeadingsChange(!showHeadings)
+                                        formatMenuExpanded = false
+                                    }
+                                )
                             }
                         }
                     }
@@ -1547,6 +1598,7 @@ fun ActiveChapterReaderScreen(
                     footnoteStyle = effectiveFootnoteStyle,
                     fontSizeOption = currentFontSize,
                     showGrammarColors = showGrammarColors,
+                    showHeadings = showHeadings,
                     onFootnoteClick = { marker ->
                         selectedFootnote = chapter.footnotes.find { it.marker == marker }
                     }
@@ -1824,6 +1876,7 @@ fun ChapterRenderer(
     footnoteStyle: FootnoteStyle,
     fontSizeOption: FontSizeOption,
     showGrammarColors: Boolean,
+    showHeadings: Boolean,
     onFootnoteClick: (String) -> Unit
 ) {
     val scale = fontSizeOption.scale
@@ -1883,27 +1936,31 @@ fun ChapterRenderer(
                     )
                 }
                 "book_division" -> {
-                    Text(
-                        text = item.text ?: "",
-                        fontStyle = FontStyle.Italic,
-                        fontSize = (14 * scale).sp,
-                        lineHeight = (18 * scale).sp,
-                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                    )
+                    if (showHeadings) {
+                        Text(
+                            text = item.text ?: "",
+                            fontStyle = FontStyle.Italic,
+                            fontSize = (14 * scale).sp,
+                            lineHeight = (18 * scale).sp,
+                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                        )
+                    }
                 }
                 "heading" -> {
-                    FormattedTextWithFootnotes(
-                        text = item.text ?: "",
-                        footnoteStyle = footnoteStyle,
-                        showGrammarColors = showGrammarColors,
-                        onFootnoteClick = onFootnoteClick,
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = (18 * scale).sp,
-                            lineHeight = (24 * scale).sp
-                        ),
-                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                    )
+                    if (showHeadings) {
+                        FormattedTextWithFootnotes(
+                            text = item.text ?: "",
+                            footnoteStyle = footnoteStyle,
+                            showGrammarColors = showGrammarColors,
+                            onFootnoteClick = onFootnoteClick,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = (18 * scale).sp,
+                                lineHeight = (24 * scale).sp
+                            ),
+                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                        )
+                    }
                 }
                 "stanza" -> {
                     Text(
@@ -2105,13 +2162,11 @@ fun OnboardingScreen(onFinish: (ReadingTrack, GraceDayOption) -> Unit) {
             ) {
                 when (page) {
                     0 -> OnboardingPage(
-                        // Use painterResource for your custom local graphic
                         iconPainter = painterResource(id = R.drawable.ic_kinnor),
                         title = "Welcome to Daily Psalms",
                         description = "Your distraction-free companion for reading through the books of Psalms and Proverbs every single month."
                     )
                     1 -> OnboardingPage(
-                        // Use rememberVectorPainter to convert the standard Material icons
                         iconPainter = androidx.compose.ui.graphics.vector.rememberVectorPainter(image = Icons.Default.Today),
                         title = "The Reading Plan",
                         description = "Each day, you are assigned 1 Proverb and 5 Psalms spaced exactly 30 chapters apart.\n\nFor example, on the 5th of the month, you will read Proverbs 5 alongside Psalms 5, 35, 65, 95, and 125. (On the 31st, we pair Proverbs 31 with the 176-verse-long Psalm 119!)"
@@ -2169,17 +2224,17 @@ fun OnboardingScreen(onFinish: (ReadingTrack, GraceDayOption) -> Unit) {
 
 @Composable
 fun OnboardingPage(
-    iconPainter: androidx.compose.ui.graphics.painter.Painter, // Changed to Painter
+    iconPainter: androidx.compose.ui.graphics.painter.Painter,
     title: String,
     description: String
 ) {
     Icon(
-        painter = iconPainter, // Changed from imageVector to painter
+        painter = iconPainter,
         contentDescription = null,
         modifier = Modifier
             .size(100.dp)
             .padding(bottom = 32.dp),
-        tint = MaterialTheme.colorScheme.primary // Your kinnor will be automatically tinted to match the theme here!
+        tint = MaterialTheme.colorScheme.primary
     )
     Text(
         text = title,

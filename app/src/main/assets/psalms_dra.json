@@ -5,6 +5,14 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "book_division",
+        "text": "BOOK I"
+      },
+      {
+        "type": "heading",
+        "text": "The Two Paths (Matthew 5:3–12; Luke 6:20–23)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -72,6 +80,10 @@
     "chapter": 2,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Triumphant Messiah (Acts 4:23–31)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -211,6 +223,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Deliver Me, O LORD! (2 Samuel 15:13–29)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -308,6 +324,10 @@
     "chapter": 4,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Answer Me When I Call!"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -416,6 +436,10 @@
     "chapter": 5,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Give Ear to My Words"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -555,6 +579,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Do Not Rebuke Me in Your Anger (Psalm 38:1–22)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -672,6 +700,10 @@
     "chapter": 7,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "I Take Refuge in You"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -861,6 +893,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "How Majestic Is Your Name!"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -968,6 +1004,10 @@
     "chapter": 9,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "I Will Give Thanks to the LORD"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -1367,6 +1407,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The Perils of the Pilgrim"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -1765,6 +1809,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "In the LORD I Take Refuge (Habakkuk 1:12–17)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -1852,6 +1900,10 @@
     "chapter": 12,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Godly Are No More"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -1951,6 +2003,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "How Long, O LORD?"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -2018,6 +2074,10 @@
     "chapter": 14,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Fool Says There Is No God (Psalm 53:1–6; Isaiah 59:1–17; Romans 3:9–20)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -2097,6 +2157,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Who May Dwell on Your Holy Mountain?"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -2154,6 +2218,10 @@
     "chapter": 16,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Presence of the LORD (Acts 2:14–36)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -2272,6 +2340,10 @@
     "chapter": 17,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Hear My Righteous Plea"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -2430,6 +2502,10 @@
     "chapter": 18,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The LORD Is My Rock (2 Samuel 22:1–51)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -2949,6 +3025,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The Heavens Declare the Glory of God"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -3107,6 +3187,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The Day of Trouble"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -3204,6 +3288,10 @@
     "chapter": 21,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "After the Battle (Proverbs 21:1–31)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -3352,6 +3440,10 @@
     "chapter": 22,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Psalm of the Cross (Matthew 27:32–56; Mark 15:21–41; Luke 23:26–43; John 19:16–30)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -3681,6 +3773,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The LORD Is My Shepherd (Ezekiel 34:11–24; John 10:1–21)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -3748,6 +3844,10 @@
     "chapter": 24,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Earth Is the LORD’s"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -3856,6 +3956,10 @@
     "chapter": 25,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "To You I Lift Up My Soul"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -4085,6 +4189,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Vindicate Me, O LORD"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -4212,6 +4320,10 @@
     "chapter": 27,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The LORD Is My Salvation"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -4361,6 +4473,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The LORD Is My Strength"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -4458,6 +4574,10 @@
     "chapter": 29,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Ascribe Glory to the LORD"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -4566,6 +4686,10 @@
     "chapter": 30,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "You Turned My Mourning into Dancing"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -4704,6 +4828,10 @@
     "chapter": 31,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Into Your Hands I Commit My Spirit (Luke 23:44–49)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -4963,6 +5091,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The Joy of Forgiveness (Romans 4:1–12)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -5080,6 +5212,10 @@
     "chapter": 33,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Praise to the Creator (Psalm 148:1–14)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -5308,6 +5444,10 @@
     "chapter": 34,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Taste and See That the LORD Is Good (1 Samuel 21:8–15)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -5546,6 +5686,10 @@
     "chapter": 35,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Contend with My Opponents, O LORD"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -5835,6 +5979,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The Transgression of the Wicked"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -5972,6 +6120,10 @@
     "chapter": 37,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Delight Yourself in the LORD (1 Kings 2:1–9)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -6381,6 +6533,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Do Not Rebuke Me in Your Anger (Psalm 6:1–10)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -6619,6 +6775,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "I Will Watch My Ways"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -6766,6 +6926,10 @@
     "chapter": 40,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "I Waited Patiently for the LORD (Psalm 70:1–5; Hebrews 10:1–18)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -6955,6 +7119,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Victory over Betrayal (John 13:18–30)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -7103,6 +7271,14 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "book_division",
+        "text": "BOOK II"
+      },
+      {
+        "type": "heading",
+        "text": "As the Deer Pants for the Water"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -7231,6 +7407,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Send Out Your Light"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -7298,6 +7478,10 @@
     "chapter": 44,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Redeem Us, O God (Romans 8:35–39)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -7567,6 +7751,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "My Heart Is Stirred by a Noble Theme (1 Kings 3:1–15; 2 Chronicles 1:1–13; Psalm 72:1–20)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -7755,6 +7943,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "God Is Our Refuge and Strength (2 Kings 18:13–16; 2 Chronicles 32:1–8)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -7883,6 +8075,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Clap Your Hands, All You Peoples"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -7990,6 +8186,10 @@
     "chapter": 48,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Broken Bondage"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -8148,6 +8348,10 @@
     "chapter": 49,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Evanescence of Wealth (Ecclesiastes 5:8–20)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -8366,6 +8570,10 @@
     "chapter": 50,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Mighty One Calls"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -8605,6 +8813,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Create in Me a Clean Heart, O God (2 Samuel 12:1–12)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -8823,6 +9035,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Why Do You Boast of Evil? (1 Samuel 22:6–23)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -8941,6 +9157,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The Fool Says There Is No God (Psalm 14:1–7; Isaiah 59:1–17; Romans 3:9–20)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -9018,6 +9238,10 @@
     "chapter": 54,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Save Me by Your Name (1 Samuel 23:7–29)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -9116,6 +9340,10 @@
     "chapter": 55,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Cast Your Burden upon the LORD (2 Samuel 17:15–29)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -9365,6 +9593,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Be Merciful to Me, O God (1 Samuel 21:8–15)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -9503,6 +9735,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "In You My Soul Takes Refuge (1 Samuel 22:1–5; Psalm 108:1–13; Psalm 142:1–7)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -9631,6 +9867,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "God Judges the Earth"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -9758,6 +9998,10 @@
     "chapter": 59,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Deliver Me from My Enemies (1 Samuel 19:1–24)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -9947,6 +10191,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Victory with God (2 Samuel 8:1–14; 1 Chronicles 18:1–13; Psalm 108:1–13)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -10095,6 +10343,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "You Have Heard My Vows"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -10192,6 +10444,10 @@
     "chapter": 62,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Waiting on God"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -10331,6 +10587,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Thirsting for God (2 Samuel 15:30–37)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -10459,6 +10719,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The Hurtful Tongue (James 3:1–12)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -10576,6 +10840,10 @@
     "chapter": 65,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Praise Awaits God in Zion"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -10724,6 +10992,10 @@
     "chapter": 66,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Make a Joyful Noise (Psalm 100:1–5)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -10933,6 +11205,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "May God Cause His Face to Shine upon Us"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -11020,6 +11296,10 @@
     "chapter": 68,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "God’s Enemies Are Scattered"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -11388,6 +11668,10 @@
     "chapter": 69,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Waters Are up to My Neck"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -11767,6 +12051,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Hurry, O LORD, to Help Me! (Psalm 40:1–17; Psalm 141:1–10)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -11834,6 +12122,10 @@
     "chapter": 71,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Be My Rock of Refuge"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -12083,6 +12375,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Endow the King with Your Justice (1 Kings 3:1–15; 2 Chronicles 1:1–13; Psalm 45:1–17)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -12290,6 +12586,14 @@
     "chapter": 73,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "book_division",
+        "text": "BOOK III"
+      },
+      {
+        "type": "heading",
+        "text": "Surely God Is Good to Israel"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -12579,6 +12883,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Why Have You Rejected Us Forever? (Psalm 79:1–13; Jeremiah 52:1–11)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -12817,6 +13125,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "God’s Righteous Judgment (Romans 2:1–16)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -12934,6 +13246,10 @@
     "chapter": 76,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "God’s Name Is Great in Israel"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -13072,6 +13388,10 @@
     "chapter": 77,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "In the Day of Trouble I Sought the Lord"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -13290,6 +13610,10 @@
     "chapter": 78,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "I Will Open My Mouth in Parables (Matthew 13:34–35)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -14019,6 +14343,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "A Prayer for Deliverance (Psalm 74:1–23; Jeremiah 52:1–11)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -14156,6 +14484,10 @@
     "chapter": 80,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Hear Us, O Shepherd of Israel"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -14365,6 +14697,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Sing for Joy to God Our Strength"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -14543,6 +14879,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "God Presides in the Divine Assembly"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -14630,6 +14970,10 @@
     "chapter": 83,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "O God, Be Not Silent"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -14829,6 +15173,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Better Is One Day in Your Courts (John 1:14–18)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -14966,6 +15314,10 @@
     "chapter": 85,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "You Showed Favor to Your Land"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -15114,6 +15466,10 @@
     "chapter": 86,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Tried but Trusting"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -15293,6 +15649,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The LORD Loves the Gates of Zion"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -15370,6 +15730,10 @@
     "chapter": 88,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "I Cry Out before You"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -15568,6 +15932,10 @@
     "chapter": 89,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "I Will Sing of His Love Forever"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -16107,6 +16475,14 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "book_division",
+        "text": "BOOK IV"
+      },
+      {
+        "type": "heading",
+        "text": "From Everlasting to Everlasting"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -16285,6 +16661,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "You Are My Refuge and My Fortress"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -16452,6 +16832,10 @@
     "chapter": 92,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "How Great Are Your Works!"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -16621,6 +17005,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The LORD Reigns! (Psalm 99:1–9)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -16678,6 +17066,10 @@
     "chapter": 94,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The LORD Will Not Forget His People"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -16917,6 +17309,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Do Not Harden Your Hearts (Hebrews 3:7–11)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -17034,6 +17430,10 @@
     "chapter": 96,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Sing to the LORD, All the Earth (1 Chronicles 16:23–36)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -17173,6 +17573,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Let the Earth Rejoice"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -17301,6 +17705,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Sing to the LORD a New Song (Psalm 149:1–9; Isaiah 42:10–17)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -17398,6 +17806,10 @@
     "chapter": 99,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The LORD Reigns! (Psalm 93:1–5)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -17497,6 +17909,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Make a Joyful Noise (Psalm 66:1–20)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -17554,6 +17970,10 @@
     "chapter": 101,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "I Will Set No Worthless Thing before My Eyes"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -17642,6 +18062,10 @@
     "chapter": 102,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Prayer of the Afflicted"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -17941,6 +18365,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Bless the LORD, O My Soul"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -18168,6 +18596,10 @@
     "chapter": 104,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "How Many Are Your Works, O LORD!"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -18526,6 +18958,10 @@
     "chapter": 105,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Tell of His Wonders (1 Chronicles 16:7–22)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -18984,6 +19420,10 @@
     "chapter": 106,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Give Thanks to the LORD, for He Is Good"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -19473,6 +19913,14 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "book_division",
+        "text": "BOOK V"
+      },
+      {
+        "type": "heading",
+        "text": "Thanksgiving for Deliverance (Matthew 8:23–27; Mark 4:35–41; Luke 8:22–25)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -19911,6 +20359,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Israel’s Kingdom Blessing (Psalm 57:1–11; Psalm 60:1–12)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -20058,6 +20510,10 @@
     "chapter": 109,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Song of the Slandered"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -20377,6 +20833,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "God’s Faithful Messiah (Genesis 14:17–24; Hebrews 5:1–10)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -20454,6 +20914,10 @@
     "chapter": 111,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Majestic Is His Work"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -20563,6 +21027,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The Blessed Fear of the LORD (Psalm 128:1–6)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -20671,6 +21139,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The LORD Exalts the Humble (1 Samuel 1:1–8)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -20768,6 +21240,10 @@
     "chapter": 114,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "A Psalm of Exodus"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -21037,6 +21513,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "To Your Name Be the Glory (Psalm 135:1–21)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -21305,6 +21785,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The LORD Has Heard My Voice"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -21503,6 +21987,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Extol Him, All You Peoples"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -21530,6 +22018,10 @@
     "chapter": 118,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The LORD Is on My Side"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -21828,6 +22320,10 @@
     "chapter": 119,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Your Word Is a Lamp to My Feet"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -23597,6 +24093,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "In My Distress I Cried to the LORD"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -23674,6 +24174,10 @@
     "chapter": 121,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "I Lift Up My Eyes to the Hills"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -23762,6 +24266,10 @@
     "chapter": 122,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Pray for the Peace of Jerusalem"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -23861,6 +24369,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "I Lift Up My Eyes to You"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -23908,6 +24420,10 @@
     "chapter": 124,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Our Help Is in the Name of the LORD"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -23997,6 +24513,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The LORD Surrounds His People"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -24054,6 +24574,10 @@
     "chapter": 126,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Zion’s Captives Restored"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -24133,6 +24657,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Children Are a Heritage from the LORD"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -24190,6 +24718,10 @@
     "chapter": 128,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Blessed Fear of the LORD (Psalm 112:1–10)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -24258,6 +24790,10 @@
     "chapter": 129,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Cords of the Wicked"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -24347,6 +24883,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Out of the Depths"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -24435,6 +24975,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "I Have Stilled My Soul"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -24472,6 +25016,10 @@
     "chapter": 132,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The LORD Has Chosen Zion"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -24661,6 +25209,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "How Pleasant to Live in Harmony! (1 Corinthians 1:10–17; Ephesians 4:1–16)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -24699,6 +25251,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Bless the LORD, All You Servants"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -24736,6 +25292,10 @@
     "chapter": 135,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Give Praise, O Servants of the LORD (Psalm 115:1–18)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -24954,6 +25514,10 @@
     "chapter": 136,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "His Loving Devotion Endures Forever (2 Chronicles 7:1–3)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -25233,6 +25797,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "By the Rivers of Babylon (Ezekiel 1:1–3)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -25331,6 +25899,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "A Thankful Heart"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -25418,6 +25990,10 @@
     "chapter": 139,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "You Have Searched Me and Known Me"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -25667,6 +26243,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Rescue Me from Evil Men"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -25815,6 +26395,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Come Quickly to Me (Psalm 70:1–5)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -25923,6 +26507,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "I Lift My Voice to the LORD (1 Samuel 22:1–5; Psalm 57:1–11)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -26010,6 +26598,10 @@
     "chapter": 143,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "I Stretch Out My Hands to You"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -26138,6 +26730,10 @@
     "chapter": 144,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Blessed Be the LORD, My Rock"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -26296,6 +26892,10 @@
     "chapter": 145,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "I Will Exalt You, My God and King"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -26515,6 +27115,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Praise the LORD, O My Soul"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -26622,6 +27226,10 @@
     "chapter": 147,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "It Is Good to Sing Praises"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -26831,6 +27439,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Praise the LORD from the Heavens (Psalm 33:1–22)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -26979,6 +27591,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Sing to the LORD a New Song (Psalm 98:1–9; Isaiah 42:10–17)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -27076,6 +27692,10 @@
     "chapter": 150,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Let Everything That Has Breath Praise the LORD"
+      },
       {
         "type": "verse",
         "number": 1,

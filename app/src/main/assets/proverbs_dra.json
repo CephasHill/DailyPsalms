@@ -5,6 +5,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The Beginning of Knowledge (Proverbs 9:1–12)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -73,6 +77,10 @@
             "indent": 0
           }
         ]
+      },
+      {
+        "type": "heading",
+        "text": "The Enticement of Sin"
       },
       {
         "type": "verse",
@@ -193,6 +201,10 @@
             "indent": 0
           }
         ]
+      },
+      {
+        "type": "heading",
+        "text": "Wisdom Calls Aloud"
       },
       {
         "type": "verse",
@@ -342,6 +354,10 @@
     "chapter": 2,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Benefits of Wisdom"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -571,6 +587,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Trust in the LORD with All Your Heart"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -689,6 +709,10 @@
             "indent": 0
           }
         ]
+      },
+      {
+        "type": "heading",
+        "text": "The Blessings of Wisdom"
       },
       {
         "type": "verse",
@@ -928,6 +952,10 @@
     "chapter": 4,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "A Father’s Instruction"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -1207,6 +1235,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Avoiding Immorality (Leviticus 20:10–21; 1 Corinthians 5:1–8)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -1445,6 +1477,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Warnings against Foolishness"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -1635,6 +1671,10 @@
         ]
       },
       {
+        "type": "heading",
+        "text": "Warnings against Adultery"
+      },
+      {
         "type": "verse",
         "number": 20,
         "lines": [
@@ -1802,6 +1842,10 @@
     "chapter": 7,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Warnings about the Adulteress"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -2080,6 +2124,10 @@
     "chapter": 8,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Excellence of Wisdom"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -2449,6 +2497,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The Way of Wisdom (Proverbs 1:1–7)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -2569,6 +2621,10 @@
         ]
       },
       {
+        "type": "heading",
+        "text": "The Way of Folly"
+      },
+      {
         "type": "verse",
         "number": 13,
         "lines": [
@@ -2636,6 +2692,10 @@
     "chapter": 10,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Solomon’s Proverbs: The Wise Son"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -2965,6 +3025,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Dishonest Scales (Deuteronomy 25:13–16; Ezekiel 45:10–12)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -3283,6 +3347,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Loving Discipline and Knowledge"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -3571,6 +3639,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "A Father’s Discipline"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -3828,6 +3900,10 @@
     "chapter": 14,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Wise Woman"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -4187,6 +4263,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "A Gentle Answer Turns Away Wrath"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -4524,6 +4604,10 @@
     "chapter": 16,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Reply of the Tongue Is from the LORD"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -4863,6 +4947,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Better a Dry Morsel in Quietness"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -5151,6 +5239,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The Selfishness of the Unfriendly"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -5398,6 +5490,10 @@
     "chapter": 19,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Man of Integrity"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -5696,6 +5792,10 @@
     "chapter": 20,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "Wine Is a Mocker"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -6004,6 +6104,10 @@
     "chapter": 21,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The King’s Heart (Psalm 21:1–13)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -6323,6 +6427,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "A Good Name"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -6483,6 +6591,10 @@
         ]
       },
       {
+        "type": "heading",
+        "text": "Thirty Sayings of the Wise"
+      },
+      {
         "type": "verse",
         "number": 17,
         "lines": [
@@ -6620,6 +6732,10 @@
     "chapter": 23,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "True Riches (1 Timothy 6:17–19; James 5:1–6)"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -6979,6 +7095,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Do Not Envy"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -7199,6 +7319,10 @@
         ]
       },
       {
+        "type": "heading",
+        "text": "Further Sayings of the Wise"
+      },
+      {
         "type": "verse",
         "number": 23,
         "lines": [
@@ -7326,6 +7450,10 @@
     "chapter": 25,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "More Proverbs of Solomon"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -7615,6 +7743,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Similitudes and Instructions"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -7903,6 +8035,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "Do Not Boast about Tomorrow (James 4:13–17)"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -8180,6 +8316,10 @@
     "chapter": 28,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Boldness of the Righteous"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -8469,6 +8609,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The Flourishing of the Righteous"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -8746,6 +8890,10 @@
     "chapter": 30,
     "chapter_footnote": null,
     "content": [
+      {
+        "type": "heading",
+        "text": "The Words of Agur"
+      },
       {
         "type": "verse",
         "number": 1,
@@ -9085,6 +9233,10 @@
     "chapter_footnote": null,
     "content": [
       {
+        "type": "heading",
+        "text": "The Sayings for King Lemuel"
+      },
+      {
         "type": "verse",
         "number": 1,
         "lines": [
@@ -9173,6 +9325,10 @@
             "indent": 0
           }
         ]
+      },
+      {
+        "type": "heading",
+        "text": "The Virtues of a Noble Woman"
       },
       {
         "type": "verse",
