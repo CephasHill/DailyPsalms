@@ -35,6 +35,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.DisableSelection
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
@@ -42,8 +44,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -677,6 +679,7 @@ fun MainAppContainer() {
 
     var allPsalms by remember { mutableStateOf<List<ChapterData>>(emptyList()) }
     var allProverbs by remember { mutableStateOf<List<ChapterData>>(emptyList()) }
+    var activeLexicon by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
 
     var showExplosion by remember { mutableStateOf(false) }
@@ -692,7 +695,6 @@ fun MainAppContainer() {
     }
     val cycleStartStr = cycleStartDate.toString()
 
-    // --- NEW ANCHOR DATE LOGIC ---
     val planStartStr = prefs[planStartDateKey]
     val planStartDate = remember(planStartStr, todayDate) {
         try {
@@ -730,6 +732,29 @@ fun MainAppContainer() {
         withContext(Dispatchers.IO) {
             val loadedPsalms = repo.loadPsalms()
             val loadedProverbs = repo.loadProverbs()
+
+            val activeLexiconFileName = when (currentBibleVersion) {
+                BibleVersion.VULGATE -> "latin_lexicon.json"
+                BibleVersion.LXX -> "greek_lexicon.json"
+                BibleVersion.HEB -> "hebrew_lexicon.json"
+                else -> null
+            }
+
+            val loadedLexicon = if (activeLexiconFileName != null && isAssetExists(context, activeLexiconFileName)) {
+                try {
+                    val jsonString = context.assets.open(activeLexiconFileName).bufferedReader().use { it.readText() }
+                    val jsonObject = org.json.JSONObject(jsonString)
+                    val map = mutableMapOf<String, String>()
+                    jsonObject.keys().forEach { key ->
+                        map[key] = jsonObject.getString(key)
+                    }
+                    map
+                } catch (_: Exception) {
+                    emptyMap()
+                }
+            } else {
+                emptyMap()
+            }
 
             // 1. Get all assignments for the whole cycle up to today, filtering out COMPLETED past days
             val fullCycleAssignments = cycleDates.flatMap { date ->
@@ -774,6 +799,7 @@ fun MainAppContainer() {
                 allPsalms = loadedPsalms
                 allProverbs = loadedProverbs
                 todayPlaylist = generatedPlaylist
+                activeLexicon = loadedLexicon
 
                 // Keep reader context stable if it was already open
                 readerContext?.let { oldContext ->
@@ -790,6 +816,14 @@ fun MainAppContainer() {
                         dailyKeys = if (oldContext.isDailyMode) generatedPlaylist.map { it.uniqueKey } else null
                     )
                 }
+
+                val activeDoneCount = rawCompletedChapters.intersect(generatedPlaylist.map { it.uniqueKey }.toSet()).size
+                context.dataStore.edit { p ->
+                    p[intPreferencesKey("widget_done_count")] = activeDoneCount
+                    p[intPreferencesKey("widget_total_count")] = generatedPlaylist.size
+                }
+                DailyPsalmsWidget().updateAll(context)
+
                 isLoading = false
             }
         }
@@ -797,6 +831,7 @@ fun MainAppContainer() {
 
     val todayPlaylistKeys = todayPlaylist.map { it.uniqueKey }.toSet()
     val completedChapters = rawCompletedChapters.intersect(todayPlaylistKeys)
+
     LaunchedEffect(Unit) {
         while (true) {
             delay(1.minutes)
@@ -898,6 +933,9 @@ fun MainAppContainer() {
                         p[checkmarksDateKey] = cycleStartStr
                         p[completedChaptersKey] = newValidChapters
 
+                        p[intPreferencesKey("widget_done_count")] = newValidChapters.size
+                        p[intPreferencesKey("widget_total_count")] = todayPlaylist.size
+
                         if (isNow100) {
                             val last100 = p[last100DateKey] ?: p[legacyLast100DateKey] ?: ""
                             val currentStreak = p[streakKey] ?: 0
@@ -943,7 +981,7 @@ fun MainAppContainer() {
                 coroutineScope.launch {
                     context.dataStore.edit { p ->
                         p[bibleVersionKey] = version.code
-                        if (version == BibleVersion.LXX || version == BibleVersion.HEB) {
+                        if (version == BibleVersion.LXX || version == BibleVersion.HEB || version == BibleVersion.VULGATE) {
                             p[footnoteStyleKey] = FootnoteStyle.HIDDEN.name
                         } else if (p[footnoteStyleKey] == FootnoteStyle.HIDDEN.name) {
                             p[footnoteStyleKey] = FootnoteStyle.INLINE.name
@@ -975,6 +1013,7 @@ fun MainAppContainer() {
                     currentFontSize = currentFontSizeOption,
                     showGrammarColors = currentShowGrammar,
                     showHeadings = currentShowHeadings,
+                    activeLexicon = activeLexicon,
                     onFootnoteStyleChange = { updateFootnoteStyle(it) },
                     onBibleVersionChange = { version, currentPage ->
                         readerContext = readerContext?.copy(initialIndex = currentPage)
@@ -1143,7 +1182,6 @@ fun DailyDashboardScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
 
-                        // --- NEW LOGIC: Dynamic Title Text ---
                         val titleText = if (reading.partId != null) {
                             "${chapter.book} ${chapter.chapter} (Part ${reading.partId})"
                         } else {
@@ -1155,10 +1193,8 @@ fun DailyDashboardScreen(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
-                        // -------------------------------------
 
-                        // Catch-Up Badge UI
-                        if (reading.isCatchUp) {
+                        if (reading.isCatchUp && !isDone) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Surface(
                                 color = MaterialTheme.colorScheme.errorContainer,
@@ -1305,6 +1341,7 @@ fun ActiveChapterReaderScreen(
     currentFontSize: FontSizeOption,
     showGrammarColors: Boolean,
     showHeadings: Boolean,
+    activeLexicon: Map<String, String>,
     onFootnoteStyleChange: (FootnoteStyle) -> Unit,
     onBibleVersionChange: (BibleVersion, Int) -> Unit,
     onFontSizeChange: (FontSizeOption) -> Unit,
@@ -1327,7 +1364,6 @@ fun ActiveChapterReaderScreen(
 
     val currentChapter = readerContext.playlist[pagerState.currentPage]
 
-    // Safely extract the key from ReaderContext using our exact assigned cycle dates
     val currentChapterKey = readerContext.dailyKeys?.get(pagerState.currentPage) ?: "${currentChapter.normalizedBook}_${currentChapter.chapter}"
     val isCurrentChapterCompleted = completedChapters.contains(currentChapterKey)
 
@@ -1336,7 +1372,7 @@ fun ActiveChapterReaderScreen(
     }
 
     // Force hidden footnotes for original language texts so the screen isn't flooded with Strong's numbers
-    val effectiveFootnoteStyle = if (currentBibleVersion == BibleVersion.HEB || currentBibleVersion == BibleVersion.LXX) {
+    val effectiveFootnoteStyle = if (currentBibleVersion == BibleVersion.HEB || currentBibleVersion == BibleVersion.LXX || currentBibleVersion == BibleVersion.VULGATE) {
         FootnoteStyle.HIDDEN
     } else {
         currentFootnoteStyle
@@ -1391,7 +1427,6 @@ fun ActiveChapterReaderScreen(
                             }
                         }
 
-                        // Size Selector Dropdown
                         Box {
                             TextButton(
                                 onClick = { sizeMenuExpanded = true },
@@ -1421,7 +1456,6 @@ fun ActiveChapterReaderScreen(
                             }
                         }
 
-                        // Version Selector Dropdown
                         Box {
                             TextButton(
                                 onClick = { versionMenuExpanded = true },
@@ -1443,7 +1477,6 @@ fun ActiveChapterReaderScreen(
                                 val categoryList = groupedVersions.keys.toList()
 
                                 groupedVersions.forEach { (category, versions) ->
-                                    // Category Header
                                     Text(
                                         text = category.displayName,
                                         style = MaterialTheme.typography.labelMedium,
@@ -1467,7 +1500,6 @@ fun ActiveChapterReaderScreen(
                                         )
                                     }
 
-                                    // Add a visual divider between categories, just like in the Format menu
                                     if (category != categoryList.last()) {
                                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                                     }
@@ -1475,8 +1507,7 @@ fun ActiveChapterReaderScreen(
                             }
                         }
 
-                        // Format Selector Dropdown (NOW ALWAYS VISIBLE!)
-                        val showFootnoteOptions = hasFootnotes && currentBibleVersion != BibleVersion.HEB && currentBibleVersion != BibleVersion.LXX
+                        val showFootnoteOptions = hasFootnotes && currentBibleVersion != BibleVersion.HEB && currentBibleVersion != BibleVersion.LXX && currentBibleVersion != BibleVersion.VULGATE
 
                         Box {
                             TextButton(
@@ -1489,7 +1520,6 @@ fun ActiveChapterReaderScreen(
                                 expanded = formatMenuExpanded,
                                 onDismissRequest = { formatMenuExpanded = false }
                             ) {
-                                // Conditional: Only show if translation supports footnotes
                                 if (showFootnoteOptions) {
                                     Text(
                                         text = "Footnote Style",
@@ -1514,7 +1544,6 @@ fun ActiveChapterReaderScreen(
                                     }
                                 }
 
-                                // Conditional: Only show if Original Languages are selected
                                 if (currentBibleVersion == BibleVersion.HEB || currentBibleVersion == BibleVersion.LXX) {
                                     if (showFootnoteOptions) {
                                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -1548,12 +1577,10 @@ fun ActiveChapterReaderScreen(
                                     )
                                 }
 
-                                // Conditional visual divider if other options were generated above
                                 if (showFootnoteOptions || currentBibleVersion == BibleVersion.HEB || currentBibleVersion == BibleVersion.LXX) {
                                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                                 }
 
-                                // ALWAYS VISIBLE: Layout Toggle
                                 Text(
                                     text = "Layout",
                                     style = MaterialTheme.typography.labelMedium,
@@ -1600,7 +1627,22 @@ fun ActiveChapterReaderScreen(
                     showGrammarColors = showGrammarColors,
                     showHeadings = showHeadings,
                     onFootnoteClick = { marker ->
-                        selectedFootnote = chapter.footnotes.find { it.marker == marker }
+                        val existingFootnote = chapter.footnotes.find { it.marker == marker }
+                        if (existingFootnote != null) {
+                            selectedFootnote = existingFootnote
+                        } else if (activeLexicon.isNotEmpty()) {
+                            val definition = activeLexicon[marker] ?: "Definition not found in lexicon."
+
+                            // For Latin, the raw dictionary string is just the definition (e.g. "to be, exist")
+                            // so we prepend the tapped marker. For Greek/Hebrew, the definition already
+                            // contains the word itself (e.g. "μακάριος: blessed; prosperous").
+                            val formattedText = when (currentBibleVersion) {
+                                BibleVersion.VULGATE -> "${marker.uppercase()}: $definition"
+                                else -> definition
+                            }
+
+                            selectedFootnote = Footnote(marker = marker, text = formattedText)
+                        }
                     }
                 )
             }
@@ -1675,17 +1717,13 @@ fun FormattedTextWithFootnotes(
     linkEntirePhrase: Boolean = false
 ) {
     val annotatedString = buildAnnotatedString {
-
-        // Unified parser that handles both HTML (Greek) and Bracket tags (Hebrew)
         fun appendParsedText(str: String) {
             if (str.contains("<span") || str.contains("<b>") || str.contains("<u>")) {
-                // --- HTML PARSER (For LXX) ---
                 val htmlRegex = Regex("""</?(span[^>]*|b|u)>""")
                 var currentIndex = 0
                 val styles = mutableListOf<SpanStyle>()
 
                 for (match in htmlRegex.findAll(str)) {
-                    // Append text before the tag
                     if (match.range.first > currentIndex) {
                         val chunk = str.substring(currentIndex, match.range.first)
                         if (showGrammarColors && styles.isNotEmpty()) {
@@ -1697,7 +1735,6 @@ fun FormattedTextWithFootnotes(
                         }
                     }
 
-                    // Handle the tag itself
                     val tag = match.value
                     if (tag.startsWith("</")) {
                         if (styles.isNotEmpty()) styles.removeAt(styles.lastIndex)
@@ -1720,7 +1757,6 @@ fun FormattedTextWithFootnotes(
                     currentIndex = match.range.last + 1
                 }
 
-                // Append remaining text
                 if (currentIndex < str.length) {
                     val chunk = str.substring(currentIndex)
                     if (showGrammarColors && styles.isNotEmpty()) {
@@ -1732,7 +1768,6 @@ fun FormattedTextWithFootnotes(
                     }
                 }
             } else {
-                // --- BRACKET PARSER (For Hebrew) ---
                 val grammarRegex = Regex("""\[([a-z_]+)](.*?)\[/\1]""")
                 var localLastIndex = 0
                 for (match in grammarRegex.findAll(str)) {
@@ -1742,12 +1777,12 @@ fun FormattedTextWithFootnotes(
 
                     if (showGrammarColors) {
                         val color = when (tag) {
-                            "n" -> Color(0xFF1976D2) // Blue
-                            "v", "v_imp", "ptc" -> Color(0xFFD32F2F) // Red
-                            "prep" -> Color(0xFF388E3C) // Green
-                            "conj" -> Color(0xFFF57C00) // Orange
-                            "a" -> Color(0xFF7B1FA2) // Purple
-                            "adv" -> Color(0xFF0097A7) // Cyan
+                            "n" -> Color(0xFF1976D2)
+                            "v", "v_imp", "ptc" -> Color(0xFFD32F2F)
+                            "prep" -> Color(0xFF388E3C)
+                            "conj" -> Color(0xFFF57C00)
+                            "a" -> Color(0xFF7B1FA2)
+                            "adv" -> Color(0xFF0097A7)
                             else -> Color.Unspecified
                         }
                         withStyle(SpanStyle(color = color)) {
@@ -1774,7 +1809,6 @@ fun FormattedTextWithFootnotes(
             val link = LinkAnnotation.Clickable(marker, styles = linkStyles) { _ -> onFootnoteClick(marker) }
 
             if (linkEntirePhrase) {
-                // We simply trim the spaces completely so the footnote snaps to the word
                 val fullPhrase = precedingText.trimEnd()
 
                 when (footnoteStyle) {
@@ -1805,7 +1839,6 @@ fun FormattedTextWithFootnotes(
             } else {
                 val trimmedPreceding = precedingText.trimEnd()
 
-                // SMART SPACE FINDER: Ignores spaces inside HTML or Bracket tags
                 var lastSpace = -1
                 var insideHtml = false
                 var insideBracket = false
@@ -1880,137 +1913,140 @@ fun ChapterRenderer(
     onFootnoteClick: (String) -> Unit
 ) {
     val scale = fontSizeOption.scale
-
     val listState = rememberLazyListState()
 
-    LazyColumn(
-        state = listState,
-        modifier = Modifier
-            .fillMaxSize()
-            .simpleVerticalScrollbar(
-                state = listState,
-                baseColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-            ),
-        contentPadding = PaddingValues(16.dp)
-    ) {
-        item {
-            if (chapter.chapterFootnote != null) {
-                FormattedTextWithFootnotes(
-                    text = "${chapter.book} ${chapter.chapter} ${chapter.chapterFootnote}",
-                    footnoteStyle = footnoteStyle,
-                    showGrammarColors = showGrammarColors,
-                    onFootnoteClick = onFootnoteClick,
-                    textStyle = MaterialTheme.typography.headlineLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = (32 * scale).sp,
-                        lineHeight = (38 * scale).sp
-                    ),
-                    linkEntirePhrase = true,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            } else {
-                Text(
-                    text = "${chapter.book} ${chapter.chapter}",
-                    style = MaterialTheme.typography.headlineLarge.copy(
-                        fontSize = (32 * scale).sp,
-                        lineHeight = (38 * scale).sp
-                    ),
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            }
-        }
-
-        var lastPrintedVerseStr = ""
-
-        items(chapter.content) { item ->
-            when (item.type) {
-                "chapter_summary" -> {
+    SelectionContainer {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .simpleVerticalScrollbar(
+                    state = listState,
+                    baseColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                ),
+            contentPadding = PaddingValues(16.dp)
+        ) {
+            item {
+                if (chapter.chapterFootnote != null) {
+                    FormattedTextWithFootnotes(
+                        text = "${chapter.book} ${chapter.chapter} ${chapter.chapterFootnote}",
+                        footnoteStyle = footnoteStyle,
+                        showGrammarColors = showGrammarColors,
+                        onFootnoteClick = onFootnoteClick,
+                        textStyle = MaterialTheme.typography.headlineLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = (32 * scale).sp,
+                            lineHeight = (38 * scale).sp
+                        ),
+                        linkEntirePhrase = true,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                } else {
                     Text(
-                        text = item.text ?: "",
-                        fontStyle = FontStyle.Italic,
-                        fontSize = (15 * scale).sp,
-                        lineHeight = (22 * scale).sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, // Makes it slightly softer than main text
-                        modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
+                        text = "${chapter.book} ${chapter.chapter}",
+                        style = MaterialTheme.typography.headlineLarge.copy(
+                            fontSize = (32 * scale).sp,
+                            lineHeight = (38 * scale).sp
+                        ),
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 16.dp)
                     )
                 }
-                "book_division" -> {
-                    if (showHeadings) {
+            }
+
+            var lastPrintedVerseStr = ""
+
+            items(chapter.content) { item ->
+                when (item.type) {
+                    "chapter_summary" -> {
                         Text(
                             text = item.text ?: "",
                             fontStyle = FontStyle.Italic,
+                            fontSize = (15 * scale).sp,
+                            lineHeight = (22 * scale).sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
+                        )
+                    }
+                    "book_division" -> {
+                        if (showHeadings) {
+                            Text(
+                                text = item.text ?: "",
+                                fontStyle = FontStyle.Italic,
+                                fontSize = (14 * scale).sp,
+                                lineHeight = (18 * scale).sp,
+                                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                            )
+                        }
+                    }
+                    "heading" -> {
+                        if (showHeadings) {
+                            FormattedTextWithFootnotes(
+                                text = item.text ?: "",
+                                footnoteStyle = footnoteStyle,
+                                showGrammarColors = showGrammarColors,
+                                onFootnoteClick = onFootnoteClick,
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = (18 * scale).sp,
+                                    lineHeight = (24 * scale).sp
+                                ),
+                                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                            )
+                        }
+                    }
+                    "stanza" -> {
+                        Text(
+                            text = item.text ?: "",
+                            fontWeight = FontWeight.SemiBold,
                             fontSize = (14 * scale).sp,
                             lineHeight = (18 * scale).sp,
-                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                            modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
                         )
                     }
-                }
-                "heading" -> {
-                    if (showHeadings) {
-                        FormattedTextWithFootnotes(
-                            text = item.text ?: "",
-                            footnoteStyle = footnoteStyle,
-                            showGrammarColors = showGrammarColors,
-                            onFootnoteClick = onFootnoteClick,
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = (18 * scale).sp,
-                                lineHeight = (24 * scale).sp
-                            ),
-                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                        )
-                    }
-                }
-                "stanza" -> {
-                    Text(
-                        text = item.text ?: "",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = (14 * scale).sp,
-                        lineHeight = (18 * scale).sp,
-                        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
-                    )
-                }
-                "verse" -> {
-                    val currentVerseStr = item.number.toString()
-                    val showNumber = currentVerseStr != lastPrintedVerseStr
-                    if (showNumber) {
-                        lastPrintedVerseStr = currentVerseStr
-                    }
+                    "verse" -> {
+                        val currentVerseStr = item.number.toString()
+                        val showNumber = currentVerseStr != lastPrintedVerseStr
+                        if (showNumber) {
+                            lastPrintedVerseStr = currentVerseStr
+                        }
 
-                    Row(modifier = Modifier.padding(bottom = 4.dp)) {
-                        Text(
-                            text = if (showNumber) currentVerseStr else "",
-                            fontSize = (10 * scale).sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .padding(end = 8.dp, top = (4 * scale).dp)
-                                .width((28 * scale).dp)
-                        )
-                        Column {
-                            item.lines?.forEach { line ->
-                                FormattedTextWithFootnotes(
-                                    text = line.text,
-                                    footnoteStyle = footnoteStyle,
-                                    showGrammarColors = showGrammarColors,
-                                    onFootnoteClick = onFootnoteClick,
-                                    textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                        fontSize = (16 * scale).sp,
-                                        lineHeight = (22 * scale).sp
-                                    ),
-                                    modifier = Modifier.padding(
-                                        start = if (line.indent == 1) 16.dp else 0.dp
-                                    )
+                        Row(modifier = Modifier.padding(bottom = 4.dp)) {
+                            DisableSelection {
+                                Text(
+                                    text = if (showNumber) currentVerseStr else "",
+                                    fontSize = (10 * scale).sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier
+                                        .padding(end = 8.dp, top = (4 * scale).dp)
+                                        .width((28 * scale).dp)
                                 )
+                            }
+                            Column {
+                                item.lines?.forEach { line ->
+                                    FormattedTextWithFootnotes(
+                                        text = line.text,
+                                        footnoteStyle = footnoteStyle,
+                                        showGrammarColors = showGrammarColors,
+                                        onFootnoteClick = onFootnoteClick,
+                                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                            fontSize = (16 * scale).sp,
+                                            lineHeight = (22 * scale).sp
+                                        ),
+                                        modifier = Modifier.padding(
+                                            start = if (line.indent == 1) 16.dp else 0.dp
+                                        )
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
-        }
 
-        item {
-            Spacer(modifier = Modifier.height(64.dp))
+            item {
+                Spacer(modifier = Modifier.height(64.dp))
+            }
         }
     }
 }
@@ -2046,29 +2082,24 @@ fun ParticleExplosion(modifier: Modifier = Modifier, onFinished: () -> Unit) {
     LaunchedEffect(Unit) {
         var lastTime = withFrameMillis { it }
         var elapsedTime = 0L
-        val animationDurationMs = 3000L // Lock the explosion to exactly 3 seconds
+        val animationDurationMs = 3000L
 
         while (elapsedTime < animationDurationMs) {
             withFrameMillis { currentTime ->
-                // 1. Calculate how much time passed since the last frame
                 val deltaMs = currentTime - lastTime
                 lastTime = currentTime
                 elapsedTime += deltaMs
 
-                // 2. Normalize the speed. 16.6ms is one frame at 60fps.
-                // Multiplying by 0.4f globally slows down the physical speed of the particles!
                 val timeStep = (deltaMs / 16.6f) * 0.4f
 
                 for (p in particles) {
                     p.x += p.vx * timeStep
                     p.y += p.vy * timeStep
                     p.vy += 0.004f * timeStep
-                    p.vx *= (1f - (0.02f * timeStep)) // Adjusted friction
+                    p.vx *= (1f - (0.02f * timeStep))
                     p.rotation += p.rotationSpeed * timeStep
                 }
 
-                // 3. Update your original 'frame' state from 0 to 120 based on time
-                // This ensures your Canvas alpha fading logic below still works perfectly
                 frame = ((elapsedTime.toFloat() / animationDurationMs) * 120).toInt()
             }
         }
@@ -2107,11 +2138,10 @@ fun OnboardingScreen(onFinish: (ReadingTrack, GraceDayOption) -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp)
-                        .padding(bottom = 24.dp), // Padding for gesture navigation bars
+                        .padding(bottom = 24.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Page Indicators (Dots)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         repeat(5) { index ->
                             val color = if (pagerState.currentPage == index) {
@@ -2127,7 +2157,6 @@ fun OnboardingScreen(onFinish: (ReadingTrack, GraceDayOption) -> Unit) {
                         }
                     }
 
-                    // Navigation Button
                     if (pagerState.currentPage == 4) {
                         Button(onClick = { onFinish(selectedTrack, selectedGraceDay) }) {
                             Text("Get Started")
@@ -2182,7 +2211,6 @@ fun OnboardingScreen(onFinish: (ReadingTrack, GraceDayOption) -> Unit) {
                         description = "Build a lasting scripture habit! Track your progress with the built-in streak system, and add our Home Screen Widget to check your daily reading status at a glance."
                     )
                     4 -> {
-                        // The Customization Page
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
                                 imageVector = Icons.Default.Settings,
@@ -2197,7 +2225,6 @@ fun OnboardingScreen(onFinish: (ReadingTrack, GraceDayOption) -> Unit) {
                                 modifier = Modifier.padding(bottom = 24.dp)
                             )
 
-                            // A simple selection layout for Onboarding
                             Text("Select Your Reading Track:", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                             ReadingTrack.entries.forEach { track ->
                                 Row(
@@ -2257,11 +2284,9 @@ fun Modifier.simpleVerticalScrollbar(
     width: androidx.compose.ui.unit.Dp = 4.dp,
     baseColor: Color = Color.Gray
 ): Modifier = composed {
-    // 1. Track whether the list is currently moving
     val targetAlpha = if (state.isScrollInProgress) 0.5f else 0f
     val duration = if (state.isScrollInProgress) 150 else 500
 
-    // 2. Animate the fade smoothly
     val alpha by animateFloatAsState(
         targetValue = targetAlpha,
         animationSpec = tween(durationMillis = duration),
@@ -2271,7 +2296,6 @@ fun Modifier.simpleVerticalScrollbar(
     drawWithContent {
         drawContent()
 
-        // 3. Only calculate and draw the bar if it's actually visible
         if (alpha > 0f) {
             val firstVisibleElementIndex = state.layoutInfo.visibleItemsInfo.firstOrNull()?.index
 
@@ -2294,7 +2318,7 @@ fun Modifier.simpleVerticalScrollbar(
                 val scrollbarY = (scrollPercentage * size.height).coerceIn(0f, size.height - scrollbarHeight)
 
                 drawRoundRect(
-                    color = baseColor.copy(alpha = alpha), // Apply the animated alpha here
+                    color = baseColor.copy(alpha = alpha),
                     topLeft = Offset(size.width - width.toPx(), scrollbarY),
                     size = Size(width.toPx(), scrollbarHeight),
                     cornerRadius = CornerRadius(width.toPx() / 2, width.toPx() / 2)
