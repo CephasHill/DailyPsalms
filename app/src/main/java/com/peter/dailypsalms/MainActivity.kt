@@ -40,6 +40,7 @@ import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
@@ -1403,7 +1404,12 @@ fun ActiveChapterReaderScreen(
                         onClick = onBack,
                         contentPadding = PaddingValues(horizontal = 8.dp)
                     ) {
-                        Text("← Back")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            modifier = Modifier.size(18.dp).padding(end = 4.dp)
+                        )
+                        Text("Back")
                     }
 
                     Row(
