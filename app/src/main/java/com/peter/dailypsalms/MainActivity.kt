@@ -2,6 +2,7 @@ package com.peter.dailypsalms
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -125,7 +126,6 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.minutes
-import android.content.Intent
 
 @Composable
 fun AboutScreen(
@@ -1397,9 +1397,8 @@ fun ActiveChapterReaderScreen(
 ) {
     val context = LocalContext.current
     var selectedFootnote by remember { mutableStateOf<Footnote?>(null) }
-    var formatMenuExpanded by remember { mutableStateOf(false) }
     var versionMenuExpanded by remember { mutableStateOf(false) }
-    var sizeMenuExpanded by remember { mutableStateOf(false) }
+    var settingsMenuExpanded by remember { mutableStateOf(false) }
 
     val pagerState = rememberPagerState(
         initialPage = readerContext.initialIndex,
@@ -1455,35 +1454,8 @@ fun ActiveChapterReaderScreen(
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.End
                     ) {
-                        Box {
-                            TextButton(
-                                onClick = { sizeMenuExpanded = true },
-                                contentPadding = PaddingValues(horizontal = 6.dp)
-                            ) {
-                                Text("Size ▼", fontWeight = FontWeight.Bold)
-                            }
-                            DropdownMenu(
-                                expanded = sizeMenuExpanded,
-                                onDismissRequest = { sizeMenuExpanded = false }
-                            ) {
-                                FontSizeOption.entries.forEach { option ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = option.displayName,
-                                                fontWeight = if (option == currentFontSize) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (option == currentFontSize) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                            )
-                                        },
-                                        onClick = {
-                                            onFontSizeChange(option)
-                                            sizeMenuExpanded = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
 
+                        // Version Selector Dropdown
                         Box {
                             TextButton(
                                 onClick = { versionMenuExpanded = true },
@@ -1505,6 +1477,7 @@ fun ActiveChapterReaderScreen(
                                 val categoryList = groupedVersions.keys.toList()
 
                                 groupedVersions.forEach { (category, versions) ->
+                                    // Category Header
                                     Text(
                                         text = category.displayName,
                                         style = MaterialTheme.typography.labelMedium,
@@ -1528,6 +1501,7 @@ fun ActiveChapterReaderScreen(
                                         )
                                     }
 
+                                    // Add a visual divider between categories
                                     if (category != categoryList.last()) {
                                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                                     }
@@ -1535,19 +1509,46 @@ fun ActiveChapterReaderScreen(
                             }
                         }
 
+                        // Unified Settings Dropdown
                         val showFootnoteOptions = hasFootnotes && currentBibleVersion != BibleVersion.HEB && currentBibleVersion != BibleVersion.LXX && currentBibleVersion != BibleVersion.VULGATE
 
                         Box {
                             TextButton(
-                                onClick = { formatMenuExpanded = true },
+                                onClick = { settingsMenuExpanded = true },
                                 contentPadding = PaddingValues(horizontal = 6.dp)
                             ) {
-                                Text("Format ▼", fontWeight = FontWeight.Bold)
+                                Text("Settings ▼", fontWeight = FontWeight.Bold)
                             }
                             DropdownMenu(
-                                expanded = formatMenuExpanded,
-                                onDismissRequest = { formatMenuExpanded = false }
+                                expanded = settingsMenuExpanded,
+                                onDismissRequest = { settingsMenuExpanded = false }
                             ) {
+                                // ALWAYS VISIBLE: Text Size
+                                Text(
+                                    text = "Text Size",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                )
+                                FontSizeOption.entries.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = option.displayName,
+                                                fontWeight = if (option == currentFontSize) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (option == currentFontSize) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        },
+                                        onClick = {
+                                            onFontSizeChange(option)
+                                            settingsMenuExpanded = false
+                                        }
+                                    )
+                                }
+
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                                // Conditional: Only show if translation supports footnotes
                                 if (showFootnoteOptions) {
                                     Text(
                                         text = "Footnote Style",
@@ -1566,12 +1567,13 @@ fun ActiveChapterReaderScreen(
                                             },
                                             onClick = {
                                                 onFootnoteStyleChange(style)
-                                                formatMenuExpanded = false
+                                                settingsMenuExpanded = false
                                             }
                                         )
                                     }
                                 }
 
+                                // Conditional: Only show if Original Languages are selected
                                 if (currentBibleVersion == BibleVersion.HEB || currentBibleVersion == BibleVersion.LXX) {
                                     if (showFootnoteOptions) {
                                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -1600,7 +1602,7 @@ fun ActiveChapterReaderScreen(
                                         },
                                         onClick = {
                                             onGrammarColorsChange(!showGrammarColors)
-                                            formatMenuExpanded = false
+                                            settingsMenuExpanded = false
                                         }
                                     )
                                 }
@@ -1609,6 +1611,7 @@ fun ActiveChapterReaderScreen(
                                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                                 }
 
+                                // ALWAYS VISIBLE: Layout Toggle
                                 Text(
                                     text = "Layout",
                                     style = MaterialTheme.typography.labelMedium,
@@ -1633,7 +1636,7 @@ fun ActiveChapterReaderScreen(
                                     },
                                     onClick = {
                                         onShowHeadingsChange(!showHeadings)
-                                        formatMenuExpanded = false
+                                        settingsMenuExpanded = false
                                     }
                                 )
                             }
@@ -1673,7 +1676,6 @@ fun ActiveChapterReaderScreen(
                             selectedFootnote = Footnote(marker = marker, text = formattedText)
                         }
                     },
-                    // NEW: Pass the daily mode states down to the renderer
                     isDailyMode = readerContext.isDailyMode,
                     isCompleted = isPageCompleted,
                     onToggleComplete = { onToggleComplete(pageChapterKey) }
