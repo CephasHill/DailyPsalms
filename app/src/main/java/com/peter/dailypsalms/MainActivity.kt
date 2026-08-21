@@ -624,15 +624,18 @@ class MainActivity : ComponentActivity() {
                         )
                     } else {
                         OnboardingScreen(
-                            onFinish = { selectedTrack, selectedGraceDay ->
+                            onFinish = { selectedTrack, selectedGraceDay, selectedVersion ->
                                 coroutineScope.launch {
                                     context.dataStore.edit { p ->
                                         p[hasSeenOnboardingKey] = true
 
                                         val readingTrackKey = stringPreferencesKey("reading_track")
                                         val graceDayKey = stringPreferencesKey("grace_day")
+                                        val bibleVersionKey = stringPreferencesKey("bible_version")
+
                                         p[readingTrackKey] = selectedTrack.name
                                         p[graceDayKey] = selectedGraceDay.name
+                                        p[bibleVersionKey] = selectedVersion.code
                                         p[stringPreferencesKey("plan_start_date")] = LocalDate.now().toString()
                                     }
                                 }
@@ -2204,12 +2207,14 @@ fun ParticleExplosion(modifier: Modifier = Modifier, onFinished: () -> Unit) {
 }
 
 @Composable
-fun OnboardingScreen(onFinish: (ReadingTrack, GraceDayOption) -> Unit) {
-    val pagerState = rememberPagerState(pageCount = { 5 })
+fun OnboardingScreen(onFinish: (ReadingTrack, GraceDayOption, BibleVersion) -> Unit) {
+    // Increased page count to 6 to accommodate the new Translations page
+    val pagerState = rememberPagerState(pageCount = { 6 })
     val coroutineScope = rememberCoroutineScope()
 
     var selectedTrack by remember { mutableStateOf(ReadingTrack.CLASSIC) }
     var selectedGraceDay by remember { mutableStateOf(GraceDayOption.SUNDAY) }
+    var selectedVersion by remember { mutableStateOf(BibleVersion.BSB) }
 
     Scaffold(
         bottomBar = {
@@ -2223,7 +2228,7 @@ fun OnboardingScreen(onFinish: (ReadingTrack, GraceDayOption) -> Unit) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        repeat(5) { index ->
+                        repeat(6) { index ->
                             val color = if (pagerState.currentPage == index) {
                                 MaterialTheme.colorScheme.primary
                             } else {
@@ -2237,8 +2242,8 @@ fun OnboardingScreen(onFinish: (ReadingTrack, GraceDayOption) -> Unit) {
                         }
                     }
 
-                    if (pagerState.currentPage == 4) {
-                        Button(onClick = { onFinish(selectedTrack, selectedGraceDay) }) {
+                    if (pagerState.currentPage == 5) {
+                        Button(onClick = { onFinish(selectedTrack, selectedGraceDay, selectedVersion) }) {
                             Text("Get Started")
                         }
                     } else {
@@ -2278,12 +2283,12 @@ fun OnboardingScreen(onFinish: (ReadingTrack, GraceDayOption) -> Unit) {
                     1 -> OnboardingPage(
                         iconPainter = androidx.compose.ui.graphics.vector.rememberVectorPainter(image = Icons.Default.Today),
                         title = "The Reading Plan",
-                        description = "Each day, you are assigned 1 Proverb and 5 Psalms spaced exactly 30 chapters apart.\n\nFor example, on the 5th of the month, you will read Proverbs 5 alongside Psalms 5, 35, 65, 95, and 125. (On the 31st, we pair Proverbs 31 with the 176-verse-long Psalm 119!)"
+                        description = "Each day, you are assigned 1 Proverb and 5 Psalms spaced exactly 30 chapters apart.\n\nFor example, on the 5th of the month, you will read Proverbs 5 alongside Psalms 5, 35, 65, 95, and 125. (On the 31st, we pair Proverbs 31 with the 176-verse-long Psalm 119!)\n\nYou can customize your reading plan in the About menu."
                     )
                     2 -> OnboardingPage(
                         iconPainter = androidx.compose.ui.graphics.vector.rememberVectorPainter(image = Icons.Default.Info),
                         title = "Deep Study Tools",
-                        description = "Tap the 'Version' menu to explore a vast library of translations, from the modern BSB to the ancient Greek Septuagint.\n\nFor supported texts, a 'Format' menu will automatically appear, giving you access to footnotes, grammar color-coding, and integrated lexicons."
+                        description = "Explore a vast library of translations, from the modern BSB to the ancient Greek Septuagint.\n\nFor supported texts, you have access to footnotes, grammar color-coding, and integrated lexicons."
                     )
                     3 -> OnboardingPage(
                         iconPainter = androidx.compose.ui.graphics.vector.rememberVectorPainter(image = Icons.Default.Favorite),
@@ -2291,11 +2296,57 @@ fun OnboardingScreen(onFinish: (ReadingTrack, GraceDayOption) -> Unit) {
                         description = "Build a lasting scripture habit! Track your progress with the built-in streak system, and add our Home Screen Widget to check your daily reading status at a glance."
                     )
                     4 -> {
+                        // NEW PAGE: Translation Selection
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.Book,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp).padding(bottom = 16.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "Choose Your Text",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 16.dp)
+                            )
+                            Text(
+                                text = "Choose a popular translation to get started. You can easily switch versions in the Settings menu and learn more about our full library on the About page.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 24.dp)
+                            )
+
+                            val startingVersions = listOf(BibleVersion.BSB, BibleVersion.NET, BibleVersion.WEB, BibleVersion.KJV)
+
+                            startingVersions.forEach { version ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth().clickable { selectedVersion = version }.padding(vertical = 8.dp)
+                                ) {
+                                    androidx.compose.material3.RadioButton(
+                                        selected = selectedVersion == version,
+                                        onClick = { selectedVersion = version }
+                                    )
+                                    Column {
+                                        Text(version.displayName, fontWeight = FontWeight.Bold)
+                                        Text(version.description, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    5 -> {
+                        // UPDATED PAGE: Customization with Grace Day Explanation
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.verticalScroll(rememberScrollState())
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.Settings,
                                 contentDescription = null,
-                                modifier = Modifier.size(80.dp).padding(bottom = 16.dp),
+                                modifier = Modifier.size(64.dp).padding(bottom = 16.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                             Text(
@@ -2305,11 +2356,12 @@ fun OnboardingScreen(onFinish: (ReadingTrack, GraceDayOption) -> Unit) {
                                 modifier = Modifier.padding(bottom = 24.dp)
                             )
 
-                            Text("Select Your Reading Track:", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                            // Track Selector
+                            Text("1. Select Your Reading Track", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.align(Alignment.Start))
                             ReadingTrack.entries.forEach { track ->
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.fillMaxWidth().clickable { selectedTrack = track }.padding(vertical = 8.dp)
+                                    modifier = Modifier.fillMaxWidth().clickable { selectedTrack = track }.padding(vertical = 6.dp)
                                 ) {
                                     androidx.compose.material3.RadioButton(
                                         selected = selectedTrack == track,
@@ -2321,6 +2373,41 @@ fun OnboardingScreen(onFinish: (ReadingTrack, GraceDayOption) -> Unit) {
                                     }
                                 }
                             }
+
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+                            // Grace Day Explanation & Selector
+                            Text("2. Set a Grace Day", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.align(Alignment.Start))
+                            Text(
+                                text = "Missed a reading? No problem. Incomplete chapters will roll over to the next day. As long as you finish your weekly chapters by your Grace Day, your streak is perfectly safe!",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+                            )
+
+                            Box(modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
+                                var graceMenuExpanded by remember { mutableStateOf(false) }
+                                TextButton(onClick = { graceMenuExpanded = true }, contentPadding = PaddingValues(0.dp)) {
+                                    Text("${selectedGraceDay.displayName} ▼", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                }
+                                DropdownMenu(expanded = graceMenuExpanded, onDismissRequest = { graceMenuExpanded = false }) {
+                                    GraceDayOption.entries.forEach { day ->
+                                        DropdownMenuItem(
+                                            text = { Text(day.displayName) },
+                                            onClick = { selectedGraceDay = day; graceMenuExpanded = false }
+                                        )
+                                    }
+                                }
+                            }
+
+                            Text(
+                                text = "Note: You can change these preferences or disable the Grace Day at any time in the About page.",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontStyle = FontStyle.Italic,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 32.dp)
+                            )
                         }
                     }
                 }
@@ -2328,7 +2415,6 @@ fun OnboardingScreen(onFinish: (ReadingTrack, GraceDayOption) -> Unit) {
         }
     }
 }
-
 @Composable
 fun OnboardingPage(
     iconPainter: androidx.compose.ui.graphics.painter.Painter,
