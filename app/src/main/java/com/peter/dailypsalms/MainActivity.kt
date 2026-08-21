@@ -1365,11 +1365,6 @@ fun ActiveChapterReaderScreen(
         pageCount = { readerContext.playlist.size }
     )
 
-    val currentChapter = readerContext.playlist[pagerState.currentPage]
-
-    val currentChapterKey = readerContext.dailyKeys?.get(pagerState.currentPage) ?: "${currentChapter.normalizedBook}_${currentChapter.chapter}"
-    val isCurrentChapterCompleted = completedChapters.contains(currentChapterKey)
-
     val hasFootnotes = remember(readerContext.playlist) {
         readerContext.playlist.any { it.footnotes.isNotEmpty() }
     }
@@ -1419,22 +1414,6 @@ fun ActiveChapterReaderScreen(
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.End
                     ) {
-                        if (readerContext.isDailyMode) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .clickable { onToggleComplete(currentChapterKey) }
-                                    .padding(horizontal = 4.dp)
-                            ) {
-                                Text("Done", style = MaterialTheme.typography.labelLarge)
-                                Checkbox(
-                                    checked = isCurrentChapterCompleted,
-                                    onCheckedChange = { onToggleComplete(currentChapterKey) },
-                                    modifier = Modifier.scale(0.8f)
-                                )
-                            }
-                        }
-
                         Box {
                             TextButton(
                                 onClick = { sizeMenuExpanded = true },
@@ -1628,6 +1607,10 @@ fun ActiveChapterReaderScreen(
             ) { page ->
                 val chapter = readerContext.playlist[page]
 
+                // Calculate the exact key and completion status for this specific page
+                val pageChapterKey = readerContext.dailyKeys?.get(page) ?: "${chapter.normalizedBook}_${chapter.chapter}"
+                val isPageCompleted = completedChapters.contains(pageChapterKey)
+
                 ChapterRenderer(
                     chapter = chapter,
                     footnoteStyle = effectiveFootnoteStyle,
@@ -1641,9 +1624,6 @@ fun ActiveChapterReaderScreen(
                         } else if (activeLexicon.isNotEmpty()) {
                             val definition = activeLexicon[marker] ?: "Definition not found in lexicon."
 
-                            // For Latin, the raw dictionary string is just the definition (e.g. "to be, exist")
-                            // so we prepend the tapped marker. For Greek/Hebrew, the definition already
-                            // contains the word itself (e.g. "μακάριος: blessed; prosperous").
                             val formattedText = when (currentBibleVersion) {
                                 BibleVersion.VULGATE -> "${marker.uppercase()}: $definition"
                                 else -> definition
@@ -1651,7 +1631,11 @@ fun ActiveChapterReaderScreen(
 
                             selectedFootnote = Footnote(marker = marker, text = formattedText)
                         }
-                    }
+                    },
+                    // NEW: Pass the daily mode states down to the renderer
+                    isDailyMode = readerContext.isDailyMode,
+                    isCompleted = isPageCompleted,
+                    onToggleComplete = { onToggleComplete(pageChapterKey) }
                 )
             }
         }
@@ -1928,7 +1912,10 @@ fun ChapterRenderer(
     fontSizeOption: FontSizeOption,
     showGrammarColors: Boolean,
     showHeadings: Boolean,
-    onFootnoteClick: (String) -> Unit
+    onFootnoteClick: (String) -> Unit,
+    isDailyMode: Boolean = false,
+    isCompleted: Boolean = false,
+    onToggleComplete: () -> Unit = {}
 ) {
     val scale = fontSizeOption.scale
     val listState = rememberLazyListState()
@@ -2063,6 +2050,38 @@ fun ChapterRenderer(
             }
 
             item {
+                if (isDailyMode) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 24.dp, bottom = 16.dp)
+                            .clickable { onToggleComplete() },
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isCompleted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = isCompleted,
+                                onCheckedChange = { onToggleComplete() }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (isCompleted) "Completed" else "Mark as Done",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isCompleted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(64.dp))
             }
         }
