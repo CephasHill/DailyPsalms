@@ -75,7 +75,7 @@ class DailyPsalmsWidget : GlanceAppWidget() {
 
             val doneCount = rawCompleted.intersect(todayKeys).size
             val totalCount = assignedToday.size
-            val isDoneToday = totalCount > 0 && doneCount >= totalCount
+            val isDoneToday = totalCount in 1..doneCount
 
             // Streak logic
             val last100Date = prefs[last100DateKey] ?: ""
@@ -86,12 +86,17 @@ class DailyPsalmsWidget : GlanceAppWidget() {
                 else -> 0
             }
 
+            val launchIntent = Intent(context, MainActivity::class.java).apply {
+                action = "ACTION_OPEN_READ_NOW"
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+
             Column(
                 modifier = GlanceModifier
                     .fillMaxSize()
                     .background(Color(0xFF005B8E))
                     .padding(10.dp)
-                    .clickable(actionStartActivity(Intent(context, MainActivity::class.java))),
+                    .clickable(actionStartActivity(launchIntent)),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {

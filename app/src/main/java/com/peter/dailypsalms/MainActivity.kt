@@ -125,6 +125,7 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.minutes
+import android.content.Intent
 
 @Composable
 fun AboutScreen(
@@ -582,9 +583,26 @@ data class ReaderContext(
 )
 
 class MainActivity : ComponentActivity() {
+
+    // 1. Add state to track the widget action
+    private var widgetAction by mutableStateOf(false)
+
+    // 2. Catch the widget click if the app is already open in the background
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.action == "ACTION_OPEN_READ_NOW") {
+            widgetAction = true
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // 3. Catch the widget click if the app starts fresh
+        if (intent.action == "ACTION_OPEN_READ_NOW") {
+            widgetAction = true
+        }
 
         scheduleMidnightWidgetUpdate(this)
 
@@ -594,13 +612,16 @@ class MainActivity : ComponentActivity() {
                 val prefs by context.dataStore.data.collectAsState(initial = null)
                 val coroutineScope = rememberCoroutineScope()
 
-                // Wait for DataStore to load to prevent flashing the wrong screen
                 if (prefs != null) {
                     val hasSeenOnboardingKey = booleanPreferencesKey("has_seen_onboarding")
                     val hasSeen = prefs!![hasSeenOnboardingKey] ?: false
 
                     if (hasSeen) {
-                        MainAppContainer()
+                        // 4. Pass the widget action and a reset callback down to the container
+                        MainAppContainer(
+                            openReadNow = widgetAction,
+                            onReadNowConsumed = { widgetAction = false }
+                        )
                     } else {
                         OnboardingScreen(
                             onFinish = { selectedTrack, selectedGraceDay ->
@@ -638,7 +659,10 @@ fun isAssetExists(context: Context, fileName: String): Boolean {
 }
 
 @Composable
-fun MainAppContainer() {
+fun MainAppContainer(
+    openReadNow: Boolean = false,
+    onReadNowConsumed: () -> Unit = {}
+) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
@@ -834,6 +858,23 @@ fun MainAppContainer() {
 
     val todayPlaylistKeys = todayPlaylist.map { it.uniqueKey }.toSet()
     val completedChapters = rawCompletedChapters.intersect(todayPlaylistKeys)
+
+    LaunchedEffect(openReadNow, isLoading) {
+        // Wait until data is loaded, then trigger the same logic as your bottom bar button
+        if (openReadNow && !isLoading && todayPlaylist.isNotEmpty()) {
+            val firstUnreadIndex = todayPlaylist.indexOfFirst {
+                !completedChapters.contains(it.uniqueKey)
+            }.takeIf { it >= 0 } ?: 0
+
+            readerContext = ReaderContext(
+                playlist = todayPlaylist.map { it.chapterData },
+                initialIndex = firstUnreadIndex,
+                isDailyMode = true,
+                dailyKeys = todayPlaylist.map { it.uniqueKey }
+            )
+            onReadNowConsumed() // Reset the flag so it doesn't keep refiring
+        }
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
