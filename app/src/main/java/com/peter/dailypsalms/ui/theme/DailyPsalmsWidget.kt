@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.clickable
@@ -20,47 +21,75 @@ import androidx.glance.background
 import androidx.glance.color.ColorProvider
 import androidx.glance.layout.*
 import androidx.glance.text.*
-import com.peter.dailypsalms.MainActivity
-import com.peter.dailypsalms.dataStore
+import com.peter.dailypsalms.*
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
 class DailyPsalmsWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        // 1. Grab the exact state perfectly the first time the widget is created
         val initialPrefs = context.dataStore.data.first()
 
         provideContent {
-            // 2. Make the DataStore reactive! This automatically fetches new data every time updateAll() is called
             val prefs by context.dataStore.data.collectAsState(initial = initialPrefs)
 
+            // Keys
+            val readingTrackKey = stringPreferencesKey("reading_track")
+            val graceDayKey = stringPreferencesKey("grace_day")
+            val checkmarksDateKey = stringPreferencesKey("checkmarks_date")
+            val completedChaptersKey = stringSetPreferencesKey("completed_chapters")
             val last100DateKey = stringPreferencesKey("last_100_date")
             val streakKey = intPreferencesKey("streak")
 
-            // Grab the pre-calculated numbers directly from the main app
-            val widgetDoneKey = intPreferencesKey("widget_done_count")
-            val widgetTotalKey = intPreferencesKey("widget_total_count")
+            // Current date context
+            val todayDate = LocalDate.now()
+            val todayStr = todayDate.toString()
+            val yesterdayStr = todayDate.minusDays(1).toString()
 
-            val todayStr = LocalDate.now().toString()
-            val yesterdayStr = LocalDate.now().minusDays(1).toString()
+            // User preferences
+            val currentTrack = try {
+                ReadingTrack.valueOf(prefs[readingTrackKey] ?: ReadingTrack.CLASSIC.name)
+            } catch (_: Exception) { ReadingTrack.CLASSIC }
 
+            val currentGraceDay = try {
+                GraceDayOption.valueOf(prefs[graceDayKey] ?: GraceDayOption.NONE.name)
+            } catch (_: Exception) { GraceDayOption.NONE }
+
+            val cycleStartDate = getCycleStartDate(todayDate, currentGraceDay)
+            val cycleStartStr = cycleStartDate.toString()
+
+            // Calculate completed items for the active cycle
+            val checkmarksDate = prefs[checkmarksDateKey] ?: ""
+            val rawCompleted = if (checkmarksDate == cycleStartStr) {
+                prefs[completedChaptersKey] ?: emptySet()
+            } else {
+                emptySet()
+            }
+
+            // Calculate today's chapters dynamically
+            val assignedToday = getAssignedChapters(todayDate, currentTrack)
+            val todayKeys = assignedToday.map { assignment ->
+                val book = if (assignment.book.contains("Psalm", true)) "Psalms" else "Proverbs"
+                val partSuffix = if (assignment.partId != null) "_part${assignment.partId}" else ""
+                "${book}_${assignment.chapter}${partSuffix}_${assignment.assignedDate}"
+            }.toSet()
+
+            val doneCount = rawCompleted.intersect(todayKeys).size
+            val totalCount = assignedToday.size
+            val isDoneToday = totalCount > 0 && doneCount >= totalCount
+
+            // Streak logic
             val last100Date = prefs[last100DateKey] ?: ""
             val actualStreak = prefs[streakKey] ?: 0
-
             val displayStreak = when (last100Date) {
                 todayStr -> actualStreak
                 yesterdayStr -> actualStreak
                 else -> 0
             }
 
-            val doneCount = prefs[widgetDoneKey] ?: 0
-            val totalCount = prefs[widgetTotalKey] ?: 0
-            val isDoneToday = totalCount > 0 && doneCount >= totalCount
-
             Column(
                 modifier = GlanceModifier
                     .fillMaxSize()
-                    .background(Color(0xFF005B8E)) // Rich blue background
+                    .background(Color(0xFF005B8E))
                     .padding(10.dp)
                     .clickable(actionStartActivity(Intent(context, MainActivity::class.java))),
                 verticalAlignment = Alignment.CenterVertically,
@@ -75,8 +104,6 @@ class DailyPsalmsWidget : GlanceAppWidget() {
                     )
                 )
                 Spacer(modifier = GlanceModifier.height(4.dp))
-
-                // Now displays the exact fraction instead of just "Read Today"
                 Text(
                     text = if (isDoneToday) "✅ Done Today" else "📖 $doneCount / $totalCount Chapters",
                     style = TextStyle(

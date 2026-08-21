@@ -585,6 +585,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        scheduleMidnightWidgetUpdate(this)
+
         setContent {
             DailyPsalmsTheme {
                 val context = LocalContext.current
