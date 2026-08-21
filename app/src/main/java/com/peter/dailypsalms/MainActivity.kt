@@ -2303,7 +2303,7 @@ fun Modifier.simpleVerticalScrollbar(
     baseColor: Color = Color.Gray
 ): Modifier = composed {
     val targetAlpha = if (state.isScrollInProgress) 0.5f else 0f
-    val duration = if (state.isScrollInProgress) 150 else 500
+    val duration = if (state.isScrollInProgress) 150 else 1500
 
     val alpha by animateFloatAsState(
         targetValue = targetAlpha,
