@@ -126,6 +126,8 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.minutes
+import androidx.compose.material.icons.filled.Email
+import androidx.core.net.toUri
 
 @Composable
 fun AboutScreen(
@@ -252,10 +254,56 @@ fun AboutScreen(
         item {
             TranslationsInfoSection(context)
             HorizontalDivider(modifier = Modifier.padding(vertical = 32.dp))
-            Spacer(modifier = Modifier.height(32.dp))
         }
 
-        // 4. TIP JAR SECTION
+        // 4. FEEDBACK & BUG REPORTS (NEW SECTION)
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Feedback & Bug Reports",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp).align(Alignment.Start)
+                    )
+
+                    Text(
+                        text = "Found a bug? Want to suggest a new feature? Send me an email!",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 16.dp).align(Alignment.Start)
+                    )
+
+                    Button(
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                                data = "mailto:p.hill.businesses@gmail.com".toUri()
+                                putExtra(Intent.EXTRA_SUBJECT, "Daily Psalms App Feedback")
+                            }
+                            context.startActivity(Intent.createChooser(intent, "Send Email"))
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Email,
+                            contentDescription = "Send Email",
+                            modifier = Modifier.padding(end = 8.dp).size(18.dp)
+                        )
+                        Text("Contact Developer")
+                    }
+                }
+            }
+            HorizontalDivider(modifier = Modifier.padding(vertical = 32.dp))
+        }
+
+        // 5. TIP JAR SECTION
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -432,14 +480,14 @@ enum class BibleCategory(val displayName: String) {
 }
 
 enum class BibleVersion(val code: String, val displayName: String, val description: String, val category: BibleCategory) {
-    ASV("asv", "ASV", "American Standard Version (1901). A highly literal, word-for-word translation rooted in the King James tradition.", BibleCategory.HISTORICAL),
+    ASV("asv", "ASV", "American Standard Version (1901). A highly literal, word-for-word translation rooted in the King James tradition. Translates the name of God as Jehovah.", BibleCategory.HISTORICAL),
     BSB("bsb", "BSB", "Berean Standard Bible (2016). A modern translation that balances strict accuracy to the original texts with high readability.", BibleCategory.MODERN),
     DRA("dra", "Douay-Rheims", "Douay-Rheims American Edition (1899). The traditional English Catholic Bible, translated directly from the Latin Vulgate.", BibleCategory.HISTORICAL),
     GNV("gnv", "Geneva", "Geneva Bible (1599). The Bible of the Protestant Reformation, famous for its extensive historical and theological study notes.", BibleCategory.HISTORICAL),
     KJV("kjv", "KJV", "King James Version (1611). The most influential English translation in history, known for its majestic and poetic language.", BibleCategory.HISTORICAL),
     NABRE("nabre", "NABRE", "New American Bible Revised Edition (2011). The modern English translation used in the Catholic liturgy in the United States.", BibleCategory.MODERN),
     NET("net", "NET", "New English Translation (2005). A modern, highly readable translation renowned for its transparency and extensive translator's notes.", BibleCategory.MODERN),
-    WEB("web", "WEB", "World English Bible (2000). A modern, public-domain update to the ASV, prioritizing clear contemporary English.", BibleCategory.MODERN),
+    WEB("web", "WEB", "World English Bible (2000). A modern, public-domain update to the ASV, prioritizing clear contemporary English. Translates the name of God as Yahweh or Yah.", BibleCategory.MODERN),
     HEB("heb", "WLC (Hebrew)", "Westminster Leningrad Codex. The oldest complete manuscript of the Hebrew Bible, serving as the definitive source text.", BibleCategory.ANCIENT),
     LXX("lxx", "LXX (Greek)", "The Septuagint. The ancient Greek translation of the Old Testament, widely used by the early Christian Church.", BibleCategory.ANCIENT),
     VULGATE("vulgate", "Vulgate (Latin)", "The Clementine Vulgate. The historic Latin translation of the Bible that served as the standard for the Western Church for over a millennium.", BibleCategory.ANCIENT)
