@@ -15,6 +15,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -88,11 +89,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -736,7 +737,6 @@ fun MainAppContainer() {
             val activeLexiconFileName = when (currentBibleVersion) {
                 BibleVersion.VULGATE -> "latin_lexicon.json"
                 BibleVersion.LXX -> "greek_lexicon.json"
-                BibleVersion.HEB -> "hebrew_lexicon.json"
                 else -> null
             }
 
@@ -1805,23 +1805,20 @@ fun FormattedTextWithFootnotes(
             val marker = match.groupValues[1]
             val precedingText = text.substring(lastIndex, match.range.first)
 
-            val linkStyles = TextLinkStyles(style = SpanStyle(textDecoration = TextDecoration.None))
-            val link = LinkAnnotation.Clickable(marker, styles = linkStyles) { _ -> onFootnoteClick(marker) }
-
             if (linkEntirePhrase) {
                 val fullPhrase = precedingText.trimEnd()
 
                 when (footnoteStyle) {
                     FootnoteStyle.BRACKETED -> {
                         appendParsedText(fullPhrase)
-                        pushLink(link)
+                        pushStringAnnotation("footnote", marker)
                         withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 0.7.em, baselineShift = BaselineShift.Superscript)) {
                             append("[$marker]")
                         }
                         pop()
                     }
                     FootnoteStyle.INLINE -> {
-                        pushLink(link)
+                        pushStringAnnotation("footnote", marker)
                         withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) {
                             withStyle(SpanStyle(fontStyle = FontStyle.Italic, fontSize = 0.7.em, baselineShift = BaselineShift.Superscript)) {
                                 append(marker)
@@ -1831,7 +1828,7 @@ fun FormattedTextWithFootnotes(
                         pop()
                     }
                     FootnoteStyle.HIDDEN -> {
-                        pushLink(link)
+                        pushStringAnnotation("footnote", marker)
                         appendParsedText(fullPhrase)
                         pop()
                     }
@@ -1865,14 +1862,14 @@ fun FormattedTextWithFootnotes(
                 when (footnoteStyle) {
                     FootnoteStyle.BRACKETED -> {
                         appendParsedText(targetWord)
-                        pushLink(link)
+                        pushStringAnnotation("footnote", marker)
                         withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 0.7.em, baselineShift = BaselineShift.Superscript)) {
                             append("[$marker]")
                         }
                         pop()
                     }
                     FootnoteStyle.INLINE -> {
-                        pushLink(link)
+                        pushStringAnnotation("footnote", marker)
                         withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) {
                             withStyle(SpanStyle(fontStyle = FontStyle.Italic, fontSize = 0.7.em, baselineShift = BaselineShift.Superscript)) {
                                 append(marker)
@@ -1882,7 +1879,7 @@ fun FormattedTextWithFootnotes(
                         pop()
                     }
                     FootnoteStyle.HIDDEN -> {
-                        pushLink(link)
+                        pushStringAnnotation("footnote", marker)
                         appendParsedText(targetWord)
                         pop()
                     }
@@ -1896,10 +1893,23 @@ fun FormattedTextWithFootnotes(
         }
     }
 
+    var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+
     Text(
         text = annotatedString,
         style = textStyle.copy(color = MaterialTheme.colorScheme.onBackground),
-        modifier = modifier
+        modifier = modifier.pointerInput(Unit) {
+            detectTapGestures { pos ->
+                layoutResult?.let { layout ->
+                    val offset = layout.getOffsetForPosition(pos)
+                    annotatedString.getStringAnnotations(tag = "footnote", start = offset, end = offset)
+                        .firstOrNull()?.let { annotation ->
+                            onFootnoteClick(annotation.item)
+                        }
+                }
+            }
+        },
+        onTextLayout = { layoutResult = it }
     )
 }
 
