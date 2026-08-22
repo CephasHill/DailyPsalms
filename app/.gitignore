@@ -2,4 +2,3 @@
 # Ignore copyrighted Bible texts
 /src/main/assets/**/*nabre.json
 /src/personalApp/assets/**/*nabre.json
-/src/personalApp/assets/**/*nlt.json
