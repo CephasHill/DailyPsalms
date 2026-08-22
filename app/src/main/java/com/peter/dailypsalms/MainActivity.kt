@@ -486,6 +486,7 @@ BSB("bsb", "BSB", "Berean Standard Bible (2016). A modern translation that balan
     KJV("kjv", "KJV", "King James Version (1611). The most influential English translation in history, known for its majestic and poetic language.", BibleCategory.HISTORICAL),
     NABRE("nabre", "NABRE", "New American Bible Revised Edition (2011). The modern English translation used in the Catholic liturgy in the United States.", BibleCategory.MODERN),
     NET("net", "NET", "New English Translation (2005). A modern, highly readable translation renowned for its transparency and extensive translator's notes.", BibleCategory.MODERN),
+    NLT("nlt", "NLT", "New Living Translation (1996). A highly readable, dynamic translation focused on conveying the original meaning in natural, everyday English.", BibleCategory.MODERN),
     WEB("web", "WEB", "World English Bible (2000). A modern, public-domain update to the ASV, prioritizing clear contemporary English. Translates the name of God as Yahweh or Yah.", BibleCategory.MODERN),
     HEB("heb", "WLC (Hebrew)", "Westminster Leningrad Codex. The oldest complete manuscript of the Hebrew Bible, serving as the definitive source text.", BibleCategory.ANCIENT),
     LXX("lxx", "LXX (Greek)", "The Septuagint. The ancient Greek translation of the Old Testament, widely used by the early Christian Church.", BibleCategory.ANCIENT),
