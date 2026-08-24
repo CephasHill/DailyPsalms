@@ -815,6 +815,7 @@ fun MainAppContainer(
             val activeLexiconFileName = when (currentBibleVersion) {
                 BibleVersion.VULGATE -> "latin_lexicon.json"
                 BibleVersion.LXX -> "greek_lexicon.json"
+                BibleVersion.HEB -> "hebrew_lexicon.json"
                 else -> null
             }
 
