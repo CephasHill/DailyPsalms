@@ -1,6 +1,5 @@
 package com.peter.dailypsalms
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -132,7 +131,6 @@ import androidx.core.net.toUri
 
 @Composable
 fun AboutScreen(
-    billingManager: BillingManager,
     currentTrack: ReadingTrack,
     currentGraceDay: GraceDayOption,
     onTrackChange: (ReadingTrack) -> Unit,
@@ -141,11 +139,7 @@ fun AboutScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val activity = context as? Activity
     var showCreditsDialog by remember { mutableStateOf(false) }
-
-    // Observe the products loaded from Google Play
-    val products by billingManager.products.collectAsState()
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -304,64 +298,6 @@ fun AboutScreen(
         item {
             TranslationsInfoSection(context)
             HorizontalDivider(modifier = Modifier.padding(vertical = 32.dp))
-        }
-
-        // ==========================================
-        // 4. TIP JAR SECTION
-        // ==========================================
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Favorite,
-                        contentDescription = "Support",
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.size(32.dp)
-                    )
-
-                    Text(
-                        text = "Support the Developer",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.padding(top = 12.dp, bottom = 8.dp)
-                    )
-
-                    Text(
-                        text = "Daily Psalms is completely free and ad-free. If this app has been a blessing to you, consider leaving a tip to support future updates!",
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-
-                    if (products.isEmpty()) {
-                        CircularProgressIndicator(modifier = Modifier.padding(8.dp))
-                        Text("Loading tip jar...", fontSize = 12.sp)
-                    } else {
-                        products.forEach { product ->
-                            val price = product.oneTimePurchaseOfferDetails?.formattedPrice ?: ""
-                            Button(
-                                onClick = {
-                                    if (activity != null) {
-                                        billingManager.launchBillingFlow(activity, product)
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                            ) {
-                                Text("Tip $price")
-                            }
-                        }
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 
@@ -776,7 +712,6 @@ fun MainAppContainer(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    val billingManager = remember { BillingManager(context) }
     val prefs by context.dataStore.data.collectAsState(initial = emptyPreferences())
 
     // DataStore Keys
@@ -1217,7 +1152,6 @@ fun MainAppContainer(
                     }
                     is NavigationTab.About -> {
                         AboutScreen(
-                            billingManager = billingManager,
                             currentTrack = currentTrack,
                             currentGraceDay = currentGraceDay,
                             onTrackChange = { newTrack ->
