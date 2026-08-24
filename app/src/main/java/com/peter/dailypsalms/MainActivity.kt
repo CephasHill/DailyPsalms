@@ -44,11 +44,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Today
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -126,7 +128,6 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.minutes
-import androidx.compose.material.icons.filled.Email
 import androidx.core.net.toUri
 
 @Composable
@@ -141,6 +142,7 @@ fun AboutScreen(
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
+    var showCreditsDialog by remember { mutableStateOf(false) }
 
     // Observe the products loaded from Google Play
     val products by billingManager.products.collectAsState()
@@ -150,7 +152,9 @@ fun AboutScreen(
         contentPadding = PaddingValues(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // ==========================================
         // 1. HEADER SECTION
+        // ==========================================
         item {
             Icon(
                 painter = painterResource(id = R.drawable.ic_kinnor),
@@ -176,7 +180,9 @@ fun AboutScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 32.dp))
         }
 
-        // 2. SETTINGS & PREFERENCES SECTION
+        // ==========================================
+        // 2. SETTINGS & SUPPORT SECTION
+        // ==========================================
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -184,7 +190,7 @@ fun AboutScreen(
             ) {
                 Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                     Text(
-                        text = "Settings & Preferences",
+                        text = "Settings & Support",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -232,55 +238,24 @@ fun AboutScreen(
                         }
                     }
 
-                    // A subtle divider to separate reading settings from app settings
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 16.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
                     )
 
-                    // Replay Tutorial Button
-                    TextButton(
-                        onClick = onReplayTutorial,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Replay App Tour")
-                    }
-                }
-            }
-            HorizontalDivider(modifier = Modifier.padding(vertical = 32.dp))
-        }
-
-        // 3. TRANSLATIONS SECTION
-        item {
-            TranslationsInfoSection(context)
-            HorizontalDivider(modifier = Modifier.padding(vertical = 32.dp))
-        }
-
-        // 4. FEEDBACK & BUG REPORTS (NEW SECTION)
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                    // Feedback & Bug Reports
                     Text(
-                        text = "Feedback & Bug Reports",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 8.dp).align(Alignment.Start)
+                        text = "Feedback",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 4.dp)
                     )
-
                     Text(
-                        text = "Found a bug? Want to suggest a new feature? Send me an email!",
+                        text = "Found a bug or have a suggestion?",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 16.dp).align(Alignment.Start)
+                        modifier = Modifier.padding(bottom = 12.dp)
                     )
-
                     Button(
                         onClick = {
                             val intent = Intent(Intent.ACTION_SENDTO).apply {
@@ -289,7 +264,7 @@ fun AboutScreen(
                             }
                             context.startActivity(Intent.createChooser(intent, "Send Email"))
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Email,
@@ -298,12 +273,42 @@ fun AboutScreen(
                         )
                         Text("Contact Developer")
                     }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(bottom = 8.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
+                    )
+
+                    // App Tour & Credits
+                    TextButton(
+                        onClick = onReplayTutorial,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Replay App Tour")
+                    }
+
+                    TextButton(
+                        onClick = { showCreditsDialog = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Credits & Copyrights")
+                    }
                 }
             }
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+
+        // ==========================================
+        // 3. TRANSLATIONS SECTION
+        // ==========================================
+        item {
+            TranslationsInfoSection(context)
             HorizontalDivider(modifier = Modifier.padding(vertical = 32.dp))
         }
 
-        // 5. TIP JAR SECTION
+        // ==========================================
+        // 4. TIP JAR SECTION
+        // ==========================================
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -336,7 +341,6 @@ fun AboutScreen(
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
 
-                    // Render buttons dynamically based on what Google Play returns
                     if (products.isEmpty()) {
                         CircularProgressIndicator(modifier = Modifier.padding(8.dp))
                         Text("Loading tip jar...", fontSize = 12.sp)
@@ -359,6 +363,61 @@ fun AboutScreen(
             }
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+
+    // ==========================================
+    // 5. CREDITS DIALOG OVERLAY
+    // ==========================================
+    if (showCreditsDialog) {
+        AlertDialog(
+            onDismissRequest = { showCreditsDialog = false },
+            title = {
+                Text("Credits & Attributions", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text(
+                        "Public Domain Texts",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    Text(
+                        "The KJV, ASV, WEB, Douay-Rheims, Geneva Bible, Vulgate, Septuagint (LXX), and Westminster Leningrad Codex (WLC) are in the public domain.\n\nThe Berean Standard Bible (BSB) text is dedicated to the public domain.",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    Text(
+                        "NET Bible",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    Text(
+                        "NET Bible® copyright ©1996-2017 by Biblical Studies Press, L.L.C. http://netbible.com All rights reserved.",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    Text(
+                        "Open Source Data",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    Text(
+                        "Morphological tagging and lexicon data provided by the Open Scriptures Hebrew Bible project and used under a Creative Commons (CC-BY-SA) license.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showCreditsDialog = false }) {
+                    Text("Close")
+                }
+            }
+        )
     }
 }
 
