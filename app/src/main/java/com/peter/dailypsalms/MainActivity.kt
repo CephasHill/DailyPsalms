@@ -2339,7 +2339,10 @@ fun OnboardingScreen(onFinish: (ReadingTrack, GraceDayOption, BibleVersion) -> U
                     )
                     4 -> {
                         // NEW PAGE: Translation Selection
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.verticalScroll(rememberScrollState())
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.Book,
                                 contentDescription = null,
