@@ -24,7 +24,7 @@ To keep the app completely offline, I wrote custom Python scripts to process the
 * Built an interactive Android Home Screen Widget to automatically sync reading progress.
 
 ## Core Features
-* **Zero-Network Offline Model:** All 11 translations and full lexicons run entirely locally on the device with zero ads.
+* **Zero-Network Offline Model:** All 9 translations and full lexicons run entirely locally on the device with zero ads.
 * **Study Tools:** Tap-to-define interlinear lexicons mapped to Strong's numbers for Hebrew (WLC) and Greek (LXX), plus a morphological Latin dictionary (Vulgate). It also includes a visual grammar color-coding guide.
 * **Customizable Schedules:** Users can follow the standard Classic 1-month track (5 Psalms, 1 Proverb) or choose an alternative pace like the 5-month track. It also features a customizable weekly grace day system to seamlessly roll over missed chapters and protect streaks.
 
