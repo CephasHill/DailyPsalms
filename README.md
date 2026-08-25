@@ -17,7 +17,7 @@ Building this required solving several data-wrangling and memory-management chal
 
 ### Data Processing & Native Development
 To keep the app completely offline, I wrote custom Python scripts to process the text.
-* Scraped and sanitized public domain texts (KJV, WEB, Septuagint, Latin Vulgate, and the Westminster Leningrad Codex).
+* Scraped and sanitized public domain texts (KJV, WEB, Septuagint, Latin Vulgate, Westminster Leningrad Codex, etc.).
 * Transformed massive academic datasets into a unified JSON schema and standalone local lexicons.
 * Built a declarative UI with Jetpack Compose, optimizing reader views with `LazyColumn` to prevent frame drops on chapters with thousands of interactive string links.
 * Managed complex user state, alternative reading tracks, and habit streaks using Jetpack DataStore.
@@ -29,8 +29,7 @@ To keep the app completely offline, I wrote custom Python scripts to process the
 * **Customizable Schedules:** Users can follow the standard Classic 1-month track (5 Psalms, 1 Proverb) or choose an alternative pace like the 5-month track. It also features a customizable weekly grace day system to seamlessly roll over missed chapters and protect streaks.
 
 ## Installation
-The app is currently available on the Google Play Store:
-> *[Insert your Google Play Store Link Here]*
+The app is currently available on the Google Play Store. You can download it [here](https://play.google.com/store/apps/details?id=com.peter.dailypsalms):
 
 ---
-*Designed and engineered by [Your Name]*
+*Designed and engineered by Peter Hill*
