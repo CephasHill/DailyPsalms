@@ -69,5 +69,5 @@ dependencies {
     implementation(libs.compose.material.icons.extended)
     implementation(libs.datastore.preferences)
     implementation(libs.glance.appwidget)
-    implementation(libs.billing.ktx)
+    implementation(libs.androidx.fragment)
 }
