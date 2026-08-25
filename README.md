@@ -1,6 +1,6 @@
-# Daily Psalms & Proverbs
+# Daily Psalms
 
-Daily Psalms & Proverbs is a native, offline-first Android application designed to help users build a daily scripture reading habit. 
+Daily Psalms is a native, offline Android application designed to help users build a daily scripture reading habit. 
 
 ## The Backstory
 This project started because of a lecture in my Sources of the Hebrew Bible class. My professor mentioned his habit of reading five Psalms and one Proverb every day, noting that it gave him a daily moment of personal worship and helped him grow wiser. 
@@ -10,7 +10,7 @@ I wanted to build that habit for myself, but standard Bible apps and physical bo
 I built this app to solve that problem. It calculates the daily chapters for you, tracks your streak, and provides deep study tools right inline. What started as a personal tool eventually grew into a public Play Store release.
 
 ## AI-Augmented Development
-This was my very first app, and I could not have built it on my own. I used a heavily AI-augmented workflow. I directed the system logic and designed the UI, and I leveraged AI to write the syntax and walk me through the implementation step by step. It was an incredible crash course in product engineering.
+This was my very first app, and I could not have built it on my own. I used a heavily AI-augmented workflow. I directed the system logic and designed the UI, and I leveraged AI to write the syntax and walk me through the implementation step by step.
 
 ## Technical Overview
 Building this required solving several data-wrangling and memory-management challenges, especially when dealing with public domain texts and ancient languages. 
