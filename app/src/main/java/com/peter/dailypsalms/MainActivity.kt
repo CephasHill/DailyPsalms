@@ -124,7 +124,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import kotlin.math.abs
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.minutes
 import androidx.core.net.toUri
@@ -2496,7 +2495,7 @@ fun Modifier.simpleVerticalScrollbar(
     baseColor: Color = Color.Gray
 ): Modifier = composed {
     val targetAlpha = if (state.isScrollInProgress) 0.5f else 0f
-    val duration = if (state.isScrollInProgress) 150 else 1500
+    val duration = if (state.isScrollInProgress) 150 else 1200
 
     val alpha by animateFloatAsState(
         targetValue = targetAlpha,
@@ -2508,25 +2507,48 @@ fun Modifier.simpleVerticalScrollbar(
         drawContent()
 
         if (alpha > 0f) {
-            val firstVisibleElementIndex = state.layoutInfo.visibleItemsInfo.firstOrNull()?.index
+            val totalItemsCount = state.layoutInfo.totalItemsCount
+            val visibleItemsInfo = state.layoutInfo.visibleItemsInfo
 
-            if (firstVisibleElementIndex != null && state.layoutInfo.totalItemsCount > state.layoutInfo.visibleItemsInfo.size) {
-                val totalItemsCount = state.layoutInfo.totalItemsCount
-                val visibleItemsInfo = state.layoutInfo.visibleItemsInfo
-
+            // Only draw if there are items, and they don't all fit on the screen[cite: 8]
+            if (totalItemsCount > 0 && visibleItemsInfo.isNotEmpty() && totalItemsCount > visibleItemsInfo.size) {
                 val firstItem = visibleItemsInfo.first()
-                val firstItemOffset = firstItem.offset
-                val firstItemSize = firstItem.size
+                val lastItem = visibleItemsInfo.last()
 
-                val fractionalFirstIndex = if (firstItemSize > 0) {
-                    firstVisibleElementIndex + (abs(firstItemOffset).toFloat() / firstItemSize.toFloat())
+                val firstSize = firstItem.size.coerceAtLeast(1)
+                val lastSize = lastItem.size.coerceAtLeast(1)
+
+                // 1. Calculate the exact fractional index of the top of the screen
+                val viewportTopIndex = firstItem.index + (kotlin.math.abs(firstItem.offset).toFloat() / firstSize)
+
+                // 2. Calculate the exact fractional index of the bottom of the screen
+                val viewportEnd = state.layoutInfo.viewportEndOffset
+                val lastItemBottom = lastItem.offset + lastItem.size
+
+                val bottomFraction = if (lastItemBottom > viewportEnd) {
+                    (viewportEnd - lastItem.offset).toFloat() / lastSize
                 } else {
-                    firstVisibleElementIndex.toFloat()
+                    1f
+                }
+                val viewportBottomIndex = lastItem.index + bottomFraction
+
+                // 3. How many "items" currently fit on screen (fractional)
+                val visibleItemsCount = viewportBottomIndex - viewportTopIndex
+                val totalItems = totalItemsCount.toFloat()
+
+                // 4. Stable Thumb Height
+                val scrollbarHeight = (size.height * (visibleItemsCount / totalItems))
+                    .coerceIn(40.dp.toPx(), size.height * 0.5f)
+
+                // 5. Calculate smooth progress from 0.0 to 1.0
+                val maxTopIndex = (totalItems - visibleItemsCount).coerceAtLeast(0f)
+                val scrollPercentage = if (maxTopIndex > 0f) {
+                    (viewportTopIndex / maxTopIndex).coerceIn(0f, 1f)
+                } else {
+                    0f
                 }
 
-                val scrollPercentage = fractionalFirstIndex / totalItemsCount.toFloat()
-                val scrollbarHeight = size.height * (visibleItemsInfo.size.toFloat() / totalItemsCount.toFloat())
-                val scrollbarY = (scrollPercentage * size.height).coerceIn(0f, size.height - scrollbarHeight)
+                val scrollbarY = scrollPercentage * (size.height - scrollbarHeight)
 
                 drawRoundRect(
                     color = baseColor.copy(alpha = alpha),
