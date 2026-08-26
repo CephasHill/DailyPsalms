@@ -15,7 +15,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -92,11 +91,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.withTransform
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -108,6 +107,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.core.net.toUri
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
@@ -126,7 +126,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.minutes
-import androidx.core.net.toUri
 
 @Composable
 fun AboutScreen(
@@ -417,13 +416,76 @@ fun TranslationsInfoSection(context: Context) {
                                         modifier = Modifier.padding(top = 8.dp)
                                     )
 
-                                    // Custom footnote legend exclusively for the NET Bible
+                                    // 1. Custom Footnote Legend for NET Bible
                                     if (version.code == "net") {
+                                        val netLegend = buildAnnotatedString {
+                                            append("Footnote Guide:\n")
+                                            withStyle(SpanStyle(color = Color(0xFF1976D2))) { append("• tn (Translator's Note):") }
+                                            append(" Explains translation decisions, grammar, and literal phrasing.\n")
+                                            withStyle(SpanStyle(color = Color(0xFF388E3C))) { append("• sn (Study Note):") }
+                                            append(" Provides historical, theological, or cultural context.\n")
+                                            withStyle(SpanStyle(color = Color(0xFFD32F2F))) { append("• tc (Text-Critical Note):") }
+                                            append(" Discusses ancient manuscript variations.")
+                                        }
                                         Text(
-                                            text = "Footnote Guide:\n" +
-                                                    "• tn (Translator's Note): Explains translation decisions, grammar, and literal phrasing.\n" +
-                                                    "• sn (Study Note): Provides historical, theological, or cultural context.\n" +
-                                                    "• tc (Text-Critical Note): Discusses ancient manuscript variations.",
+                                            text = netLegend,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                            lineHeight = 18.sp,
+                                            modifier = Modifier.padding(top = 12.dp, start = 8.dp)
+                                        )
+                                    }
+
+                                    // 2. Custom Grammar Legend for LXX (Greek)
+                                    if (version.code == "lxx") {
+                                        val lxxLegend = buildAnnotatedString {
+                                            append("Grammar Color Guide:\n")
+                                            withStyle(SpanStyle(color = Color(0xFFD32F2F))) { append("• Verbs") }
+                                            append(" are Red\n")
+                                            withStyle(SpanStyle(color = Color(0xFF1976D2))) { append("• Nouns") }
+                                            append(" are Blue\n")
+                                            append("• Participles are ")
+                                            withStyle(SpanStyle(color = Color(0xFFD32F2F))) { append("Red") }
+                                            append(" with ")
+                                            withStyle(SpanStyle(color = Color(0xFF1976D2))) { append("Blue") }
+                                            append(" endings\n")
+                                            withStyle(SpanStyle(color = Color(0xFF388E3C))) { append("• Prepositions & Conjunctions") }
+                                            append(" are Green\n")
+                                            withStyle(SpanStyle(color = Color(0xFF1976D2), textDecoration = TextDecoration.Underline)) { append("• Adjectives") }
+                                            append(" are underlined in Blue\n")
+                                            withStyle(SpanStyle(color = Color(0xFFD32F2F), textDecoration = TextDecoration.Underline)) { append("• Adverbs") }
+                                            append(" are underlined in Red\n")
+                                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("• Bold text") }
+                                            append(" indicates emphasis (e.g., imperative commands, personal/reflexive pronouns, and strong negations like οὐ μή).")
+                                        }
+                                        Text(
+                                            text = lxxLegend,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                            lineHeight = 18.sp,
+                                            modifier = Modifier.padding(top = 12.dp, start = 8.dp)
+                                        )
+                                    }
+
+                                    // 3. Custom Grammar Legend for WLC (Hebrew)
+                                    if (version.code == "heb") {
+                                        val hebLegend = buildAnnotatedString {
+                                            append("Grammar Color Guide:\n")
+                                            withStyle(SpanStyle(color = Color(0xFFD32F2F))) { append("• Verbs & Participles") }
+                                            append(" are Red\n")
+                                            withStyle(SpanStyle(color = Color(0xFF1976D2))) { append("• Nouns") }
+                                            append(" are Blue\n")
+                                            withStyle(SpanStyle(color = Color(0xFF7B1FA2))) { append("• Adjectives") }
+                                            append(" are Purple\n")
+                                            withStyle(SpanStyle(color = Color(0xFF0097A7))) { append("• Adverbs") }
+                                            append(" are Cyan\n")
+                                            withStyle(SpanStyle(color = Color(0xFF388E3C))) { append("• Prepositions") }
+                                            append(" are Green\n")
+                                            withStyle(SpanStyle(color = Color(0xFFF57C00))) { append("• Conjunctions") }
+                                            append(" are Orange")
+                                        }
+                                        Text(
+                                            text = hebLegend,
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                             lineHeight = 18.sp,
@@ -720,6 +782,7 @@ fun MainAppContainer(
     val bibleVersionKey = stringPreferencesKey("bible_version")
     val fontSizeKey = stringPreferencesKey("font_size")
     val showGrammarColorsKey = booleanPreferencesKey("show_grammar_colors")
+    val showFootnoteColorsKey = booleanPreferencesKey("show_footnote_colors")
     val last100DateKey = stringPreferencesKey("last_100_date") // Standardized
     val legacyLast100DateKey = stringPreferencesKey("last_100Date_key") // Fallback
     val streakKey = intPreferencesKey("streak")
@@ -728,6 +791,7 @@ fun MainAppContainer(
     val hasSeenOnboardingKey = booleanPreferencesKey("has_seen_onboarding")
     val planStartDateKey = stringPreferencesKey("plan_start_date")
     val showHeadingsKey = booleanPreferencesKey("show_headings")
+
 
     // Read the current states (with defaults)
     val currentTrack = try {
@@ -944,6 +1008,7 @@ fun MainAppContainer(
     } catch (_: Exception) { FontSizeOption.MEDIUM }
 
     val currentShowGrammar = prefs[showGrammarColorsKey] ?: true
+    val currentShowFootnoteColors = prefs[showFootnoteColorsKey] ?: true
     val currentShowHeadings = prefs[showHeadingsKey] ?: true
 
     // Recover date from either key structure to ensure synchronization with the widget
@@ -1062,6 +1127,10 @@ fun MainAppContainer(
                 coroutineScope.launch { context.dataStore.edit { p -> p[showGrammarColorsKey] = show } }
             }
 
+            val updateFootnoteColors = { show: Boolean ->
+                coroutineScope.launch { context.dataStore.edit { p -> p[showFootnoteColorsKey] = show } }
+            }
+
             val updateShowHeadings = { show: Boolean ->
                 coroutineScope.launch { context.dataStore.edit { p -> p[showHeadingsKey] = show } }
             }
@@ -1101,6 +1170,7 @@ fun MainAppContainer(
                     currentBibleVersion = currentBibleVersion,
                     currentFontSize = currentFontSizeOption,
                     showGrammarColors = currentShowGrammar,
+                    showFootnoteColors = currentShowFootnoteColors,
                     showHeadings = currentShowHeadings,
                     activeLexicon = activeLexicon,
                     onFootnoteStyleChange = { updateFootnoteStyle(it) },
@@ -1110,6 +1180,7 @@ fun MainAppContainer(
                     },
                     onFontSizeChange = { updateFontSize(it) },
                     onGrammarColorsChange = { updateGrammarColors(it) },
+                    onFootnoteColorsChange = { updateFootnoteColors(it) },
                     onShowHeadingsChange = { updateShowHeadings(it) },
                     onToggleComplete = { key -> toggleChapterCompletion(key) },
                     onBack = { readerContext = null },
@@ -1428,12 +1499,14 @@ fun ActiveChapterReaderScreen(
     currentBibleVersion: BibleVersion,
     currentFontSize: FontSizeOption,
     showGrammarColors: Boolean,
+    showFootnoteColors: Boolean,
     showHeadings: Boolean,
     activeLexicon: Map<String, String>,
     onFootnoteStyleChange: (FootnoteStyle) -> Unit,
     onBibleVersionChange: (BibleVersion, Int) -> Unit,
     onFontSizeChange: (FontSizeOption) -> Unit,
     onGrammarColorsChange: (Boolean) -> Unit,
+    onFootnoteColorsChange: (Boolean) -> Unit,
     onShowHeadingsChange: (Boolean) -> Unit,
     onToggleComplete: (String) -> Unit,
     onBack: () -> Unit,
@@ -1441,6 +1514,7 @@ fun ActiveChapterReaderScreen(
 ) {
     val context = LocalContext.current
     var selectedFootnote by remember { mutableStateOf<Footnote?>(null) }
+    var formatMenuExpanded by remember { mutableStateOf(false) }
     var versionMenuExpanded by remember { mutableStateOf(false) }
     var settingsMenuExpanded by remember { mutableStateOf(false) }
 
@@ -1615,6 +1689,34 @@ fun ActiveChapterReaderScreen(
                                             }
                                         )
                                     }
+                                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                    Text(
+                                        text = "Footnote Tools",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Text("Footnote Colors")
+                                                Spacer(modifier = Modifier.width(16.dp))
+                                                Switch(
+                                                    checked = showFootnoteColors,
+                                                    onCheckedChange = null,
+                                                    modifier = Modifier.scale(0.8f)
+                                                )
+                                            }
+                                        },
+                                        onClick = {
+                                            onFootnoteColorsChange(!showFootnoteColors)
+                                            formatMenuExpanded = false
+                                        }
+                                    )
                                 }
 
                                 // Conditional: Only show if Original Languages are selected
@@ -1704,6 +1806,7 @@ fun ActiveChapterReaderScreen(
                     footnoteStyle = effectiveFootnoteStyle,
                     fontSizeOption = currentFontSize,
                     showGrammarColors = showGrammarColors,
+                    showFootnoteColors = showFootnoteColors,
                     showHeadings = showHeadings,
                     onFootnoteClick = { marker ->
                         val existingFootnote = chapter.footnotes.find { it.marker == marker }
@@ -1788,14 +1891,18 @@ fun ActiveChapterReaderScreen(
 @Composable
 fun FormattedTextWithFootnotes(
     text: String,
+    footnotes: List<Footnote>,
     footnoteStyle: FootnoteStyle,
     showGrammarColors: Boolean,
+    showFootnoteColors: Boolean,
     onFootnoteClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     textStyle: TextStyle = MaterialTheme.typography.bodyLarge,
     linkEntirePhrase: Boolean = false
 ) {
     val annotatedString = buildAnnotatedString {
+
+        // Unified parser that handles both HTML (Greek) and Bracket tags (Hebrew)
         fun appendParsedText(str: String) {
             if (str.contains("<span") || str.contains("<b>") || str.contains("<u>")) {
                 val htmlRegex = Regex("""</?(span[^>]*|b|u)>""")
@@ -1856,12 +1963,12 @@ fun FormattedTextWithFootnotes(
 
                     if (showGrammarColors) {
                         val color = when (tag) {
-                            "n" -> Color(0xFF1976D2)
-                            "v", "v_imp", "ptc" -> Color(0xFFD32F2F)
-                            "prep" -> Color(0xFF388E3C)
-                            "conj" -> Color(0xFFF57C00)
-                            "a" -> Color(0xFF7B1FA2)
-                            "adv" -> Color(0xFF0097A7)
+                            "n" -> Color(0xFF1976D2) // Blue
+                            "v", "v_imp", "ptc" -> Color(0xFFD32F2F) // Red
+                            "prep" -> Color(0xFF388E3C) // Green
+                            "conj" -> Color(0xFFF57C00) // Orange
+                            "a" -> Color(0xFF7B1FA2) // Purple
+                            "adv" -> Color(0xFF0097A7) // Cyan
                             else -> Color.Unspecified
                         }
                         withStyle(SpanStyle(color = color)) {
@@ -1881,8 +1988,26 @@ fun FormattedTextWithFootnotes(
         var lastIndex = 0
 
         for (match in footnoteRegex.findAll(text)) {
-            val marker = match.groupValues[1]
+            val marker = match.groupValues[1] // This will cleanly extract "a", "b", etc.
+
+            // 2. LOOK UP THE TYPE FROM THE JSON ARRAY
+            val noteType = footnotes.find { it.marker == marker }?.type ?: ""
+
+            // 3. ASSIGN THE COLOR
+            val linkColor = when {
+                footnoteStyle == FootnoteStyle.HIDDEN -> Color.Unspecified
+                !showFootnoteColors -> MaterialTheme.colorScheme.primary
+                noteType == "tn" -> Color(0xFF1976D2) // Blue for Translator's Notes
+                noteType == "sn" -> Color(0xFF388E3C) // Green for Study Notes
+                noteType == "tc" -> Color(0xFFD32F2F) // Red for Text-Critical Notes
+                else -> MaterialTheme.colorScheme.primary // Default fallback
+            }
+
             val precedingText = text.substring(lastIndex, match.range.first)
+
+            // 4. APPLY IT TO THE LINK
+            val linkStyles = TextLinkStyles(style = SpanStyle(color = linkColor, textDecoration = TextDecoration.None))
+            val link = LinkAnnotation.Clickable(marker, styles = linkStyles) { _ -> onFootnoteClick(marker) }
 
             if (linkEntirePhrase) {
                 val fullPhrase = precedingText.trimEnd()
@@ -1890,24 +2015,22 @@ fun FormattedTextWithFootnotes(
                 when (footnoteStyle) {
                     FootnoteStyle.BRACKETED -> {
                         appendParsedText(fullPhrase)
-                        pushStringAnnotation("footnote", marker)
-                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 0.7.em, baselineShift = BaselineShift.Superscript)) {
+                        pushLink(link)
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, fontSize = 0.7.em, baselineShift = BaselineShift.Superscript)) {
                             append("[$marker]")
                         }
                         pop()
                     }
                     FootnoteStyle.INLINE -> {
-                        pushStringAnnotation("footnote", marker)
-                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) {
-                            withStyle(SpanStyle(fontStyle = FontStyle.Italic, fontSize = 0.7.em, baselineShift = BaselineShift.Superscript)) {
-                                append(marker)
-                            }
-                            appendParsedText(fullPhrase)
+                        pushLink(link)
+                        withStyle(SpanStyle(fontStyle = FontStyle.Italic, fontSize = 0.7.em, baselineShift = BaselineShift.Superscript)) {
+                            append(marker)
                         }
+                        appendParsedText(fullPhrase)
                         pop()
                     }
                     FootnoteStyle.HIDDEN -> {
-                        pushStringAnnotation("footnote", marker)
+                        pushLink(link)
                         appendParsedText(fullPhrase)
                         pop()
                     }
@@ -1941,24 +2064,22 @@ fun FormattedTextWithFootnotes(
                 when (footnoteStyle) {
                     FootnoteStyle.BRACKETED -> {
                         appendParsedText(targetWord)
-                        pushStringAnnotation("footnote", marker)
-                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 0.7.em, baselineShift = BaselineShift.Superscript)) {
+                        pushLink(link)
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, fontSize = 0.7.em, baselineShift = BaselineShift.Superscript)) {
                             append("[$marker]")
                         }
                         pop()
                     }
                     FootnoteStyle.INLINE -> {
-                        pushStringAnnotation("footnote", marker)
-                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) {
-                            withStyle(SpanStyle(fontStyle = FontStyle.Italic, fontSize = 0.7.em, baselineShift = BaselineShift.Superscript)) {
-                                append(marker)
-                            }
-                            appendParsedText(targetWord)
+                        pushLink(link)
+                        withStyle(SpanStyle(fontStyle = FontStyle.Italic, fontSize = 0.7.em, baselineShift = BaselineShift.Superscript)) {
+                            append(marker)
                         }
+                        appendParsedText(targetWord)
                         pop()
                     }
                     FootnoteStyle.HIDDEN -> {
-                        pushStringAnnotation("footnote", marker)
+                        pushLink(link)
                         appendParsedText(targetWord)
                         pop()
                     }
@@ -1972,23 +2093,10 @@ fun FormattedTextWithFootnotes(
         }
     }
 
-    var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
-
     Text(
         text = annotatedString,
         style = textStyle.copy(color = MaterialTheme.colorScheme.onBackground),
-        modifier = modifier.pointerInput(Unit) {
-            detectTapGestures { pos ->
-                layoutResult?.let { layout ->
-                    val offset = layout.getOffsetForPosition(pos)
-                    annotatedString.getStringAnnotations(tag = "footnote", start = offset, end = offset)
-                        .firstOrNull()?.let { annotation ->
-                            onFootnoteClick(annotation.item)
-                        }
-                }
-            }
-        },
-        onTextLayout = { layoutResult = it }
+        modifier = modifier
     )
 }
 
@@ -1998,6 +2106,7 @@ fun ChapterRenderer(
     footnoteStyle: FootnoteStyle,
     fontSizeOption: FontSizeOption,
     showGrammarColors: Boolean,
+    showFootnoteColors: Boolean,
     showHeadings: Boolean,
     onFootnoteClick: (String) -> Unit,
     isDailyMode: Boolean = false,
@@ -2022,8 +2131,10 @@ fun ChapterRenderer(
                 if (chapter.chapterFootnote != null) {
                     FormattedTextWithFootnotes(
                         text = "${chapter.book} ${chapter.chapter} ${chapter.chapterFootnote}",
+                        footnotes = chapter.footnotes,
                         footnoteStyle = footnoteStyle,
                         showGrammarColors = showGrammarColors,
+                        showFootnoteColors = showFootnoteColors,
                         onFootnoteClick = onFootnoteClick,
                         textStyle = MaterialTheme.typography.headlineLarge.copy(
                             fontWeight = FontWeight.Bold,
@@ -2075,8 +2186,10 @@ fun ChapterRenderer(
                         if (showHeadings) {
                             FormattedTextWithFootnotes(
                                 text = item.text ?: "",
+                                footnotes = chapter.footnotes,
                                 footnoteStyle = footnoteStyle,
                                 showGrammarColors = showGrammarColors,
+                                showFootnoteColors = showFootnoteColors,
                                 onFootnoteClick = onFootnoteClick,
                                 textStyle = MaterialTheme.typography.bodyLarge.copy(
                                     fontWeight = FontWeight.Bold,
@@ -2118,8 +2231,10 @@ fun ChapterRenderer(
                                 item.lines?.forEach { line ->
                                     FormattedTextWithFootnotes(
                                         text = line.text,
+                                        footnotes = chapter.footnotes,
                                         footnoteStyle = footnoteStyle,
                                         showGrammarColors = showGrammarColors,
+                                        showFootnoteColors = showFootnoteColors,
                                         onFootnoteClick = onFootnoteClick,
                                         textStyle = MaterialTheme.typography.bodyLarge.copy(
                                             fontSize = (16 * scale).sp,

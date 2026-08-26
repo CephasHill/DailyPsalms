@@ -24,5 +24,6 @@ data class Line(
 
 data class Footnote(
     val marker: String,
+    val type: String? = null,
     val text: String
 )
