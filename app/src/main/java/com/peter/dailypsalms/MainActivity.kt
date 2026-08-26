@@ -318,7 +318,7 @@ fun AboutScreen(
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
                     Text(
-                        "The KJV, ASV, WEB, Douay-Rheims, Geneva Bible, Vulgate, Septuagint (LXX), and Westminster Leningrad Codex (WLC) are in the public domain.\n\nThe Berean Standard Bible (BSB) text is dedicated to the public domain.",
+                        "The KJV, WEB, Douay-Rheims, Geneva Bible, Vulgate, Septuagint (LXX), and Westminster Leningrad Codex (WLC) are in the public domain.\n\nThe Berean Standard Bible (BSB) text is dedicated to the public domain.",
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
