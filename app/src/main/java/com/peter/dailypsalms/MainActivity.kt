@@ -1,5 +1,6 @@
 package com.peter.dailypsalms
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -622,7 +623,7 @@ fun getAssignedChapters(date: LocalDate, track: ReadingTrack): List<AssignedChap
                 list.add(AssignedChapter("Psalms", 119, date, partId = 5))
             } else {
                 listOf(dayOfMonth, dayOfMonth + 30, dayOfMonth + 60, dayOfMonth + 90, dayOfMonth + 120)
-                    .filter { it <= 150 && (dayOfMonth != 19 || it != 119) }
+                    .filter { it <= 150 && it != 119 }
                     .forEach { list.add(AssignedChapter("Psalms", it, date)) }
             }
 
@@ -685,7 +686,8 @@ data class ReaderContext(
     val playlist: List<ChapterData>,
     val initialIndex: Int,
     val isDailyMode: Boolean,
-    val dailyKeys: List<String>? = null
+    val dailyKeys: List<String>? = null,
+    val targetVerse: Int? = null
 )
 
 class MainActivity : ComponentActivity() {
@@ -1176,8 +1178,8 @@ fun MainAppContainer(
                     showHeadings = currentShowHeadings,
                     activeLexicon = activeLexicon,
                     onFootnoteStyleChange = { updateFootnoteStyle(it) },
-                    onBibleVersionChange = { version, currentPage ->
-                        readerContext = readerContext?.copy(initialIndex = currentPage)
+                    onBibleVersionChange = { version, currentPage, targetVerse ->
+                        readerContext = readerContext?.copy(initialIndex = currentPage, targetVerse = targetVerse)
                         updateBibleVersion(version)
                     },
                     onFontSizeChange = { updateFontSize(it) },
@@ -1505,7 +1507,7 @@ fun ActiveChapterReaderScreen(
     showHeadings: Boolean,
     activeLexicon: Map<String, String>,
     onFootnoteStyleChange: (FootnoteStyle) -> Unit,
-    onBibleVersionChange: (BibleVersion, Int) -> Unit,
+    onBibleVersionChange: (BibleVersion, Int, Int?) -> Unit,
     onFontSizeChange: (FontSizeOption) -> Unit,
     onGrammarColorsChange: (Boolean) -> Unit,
     onFootnoteColorsChange: (Boolean) -> Unit,
@@ -1519,6 +1521,7 @@ fun ActiveChapterReaderScreen(
     var formatMenuExpanded by remember { mutableStateOf(false) }
     var versionMenuExpanded by remember { mutableStateOf(false) }
     var settingsMenuExpanded by remember { mutableStateOf(false) }
+    var activeVerseNumber by remember { mutableStateOf<Int?>(null) }
 
     val pagerState = rememberPagerState(
         initialPage = readerContext.initialIndex,
@@ -1615,7 +1618,7 @@ fun ActiveChapterReaderScreen(
                                                 )
                                             },
                                             onClick = {
-                                                onBibleVersionChange(version, pagerState.currentPage)
+                                                onBibleVersionChange(version, pagerState.currentPage, activeVerseNumber)
                                                 versionMenuExpanded = false
                                             }
                                         )
@@ -1827,7 +1830,9 @@ fun ActiveChapterReaderScreen(
                     },
                     isDailyMode = readerContext.isDailyMode,
                     isCompleted = isPageCompleted,
-                    onToggleComplete = { onToggleComplete(pageChapterKey) }
+                    onToggleComplete = { onToggleComplete(pageChapterKey) },
+                    targetVerse = if (page == pagerState.currentPage) readerContext.targetVerse else null,
+                    onVerseVisible = { if (page == pagerState.currentPage) activeVerseNumber = it }
                 )
             }
         }
@@ -1905,6 +1910,27 @@ fun FormattedTextWithFootnotes(
     val isDark = isSystemInDarkTheme()
     val annotatedString = buildAnnotatedString {
 
+        // Helper to dynamically style LORD
+        val divineNameRegex = Regex("""\b(LORD|GOD)\b""")
+        fun appendWithSmallCaps(str: String) {
+            var last = 0
+            for (match in divineNameRegex.findAll(str)) {
+                // Append everything before the match
+                append(str.substring(last, match.range.first))
+
+                // Append the first letter normally (L or G), shrink the rest (ORD or OD)
+                val word = match.value
+                append(word.substring(0, 1))
+                withStyle(SpanStyle(fontSize = 0.8.em)) {
+                    append(word.substring(1))
+                }
+                last = match.range.last + 1
+            }
+            if (last < str.length) {
+                append(str.substring(last))
+            }
+        }
+
         // Unified parser that handles both HTML (Greek) and Bracket tags (Hebrew)
         fun appendParsedText(str: String) {
             if (str.contains("<span") || str.contains("<b>") || str.contains("<u>")) {
@@ -1918,9 +1944,9 @@ fun FormattedTextWithFootnotes(
                         if (showGrammarColors && styles.isNotEmpty()) {
                             var currentStyle = SpanStyle()
                             styles.forEach { currentStyle = currentStyle.merge(it) }
-                            withStyle(currentStyle) { append(chunk) }
+                            withStyle(currentStyle) { appendWithSmallCaps(chunk) }
                         } else {
-                            append(chunk)
+                            appendWithSmallCaps(chunk)
                         }
                     }
 
@@ -1951,16 +1977,16 @@ fun FormattedTextWithFootnotes(
                     if (showGrammarColors && styles.isNotEmpty()) {
                         var currentStyle = SpanStyle()
                         styles.forEach { currentStyle = currentStyle.merge(it) }
-                        withStyle(currentStyle) { append(chunk) }
+                        withStyle(currentStyle) { appendWithSmallCaps(chunk) }
                     } else {
-                        append(chunk)
+                        appendWithSmallCaps(chunk)
                     }
                 }
             } else {
                 val grammarRegex = Regex("""\[([a-z_]+)](.*?)\[/\1]""")
                 var localLastIndex = 0
                 for (match in grammarRegex.findAll(str)) {
-                    append(str.substring(localLastIndex, match.range.first))
+                    appendWithSmallCaps(str.substring(localLastIndex, match.range.first))
                     val tag = match.groupValues[1]
                     val content = match.groupValues[2]
 
@@ -1975,15 +2001,15 @@ fun FormattedTextWithFootnotes(
                             else -> Color.Unspecified
                         }
                         withStyle(SpanStyle(color = color)) {
-                            append(content)
+                            appendWithSmallCaps(content)
                         }
                     } else {
-                        append(content)
+                        appendWithSmallCaps(content)
                     }
                     localLastIndex = match.range.last + 1
                 }
                 if (localLastIndex < str.length) {
-                    append(str.substring(localLastIndex))
+                    appendWithSmallCaps(str.substring(localLastIndex))
                 }
             }
         }
@@ -2103,6 +2129,7 @@ fun FormattedTextWithFootnotes(
     )
 }
 
+@SuppressLint("FrequentlyChangingValue")
 @Composable
 fun ChapterRenderer(
     chapter: ChapterData,
@@ -2114,10 +2141,32 @@ fun ChapterRenderer(
     onFootnoteClick: (String) -> Unit,
     isDailyMode: Boolean = false,
     isCompleted: Boolean = false,
-    onToggleComplete: () -> Unit = {}
+    onToggleComplete: () -> Unit = {},
+    targetVerse: Int? = null,
+    onVerseVisible: (Int?) -> Unit = {}
 ) {
     val scale = fontSizeOption.scale
     val listState = rememberLazyListState()
+
+    // Reports the top-most visible verse to the parent screen as you scroll
+    LaunchedEffect(listState.firstVisibleItemIndex) {
+        val contentIndex = (listState.firstVisibleItemIndex - 1).coerceAtLeast(0)
+        val verse = chapter.content.getOrNull(contentIndex)?.number
+        onVerseVisible(verse)
+    }
+
+    // Instantly scrolls to the target verse when the translation loads
+    LaunchedEffect(chapter, targetVerse) {
+        if (targetVerse != null) {
+            val targetIndex = chapter.content.indexOfFirst {
+                it.type == "verse" && it.number == targetVerse
+            }
+            if (targetIndex != -1) {
+                // +1 accounts for the chapter title item at the top
+                listState.scrollToItem(targetIndex + 1)
+            }
+        }
+    }
 
     SelectionContainer {
         LazyColumn(
