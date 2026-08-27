@@ -126,6 +126,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.minutes
+import androidx.compose.foundation.isSystemInDarkTheme
 
 @Composable
 fun AboutScreen(
@@ -357,6 +358,7 @@ fun AboutScreen(
 
 @Composable
 fun TranslationsInfoSection(context: Context) {
+    val isDark = isSystemInDarkTheme()
     val availableVersions = remember {
         BibleVersion.entries.filter { version ->
             isAssetExists(context, "psalms_${version.code}.json")
@@ -420,11 +422,11 @@ fun TranslationsInfoSection(context: Context) {
                                     if (version.code == "net") {
                                         val netLegend = buildAnnotatedString {
                                             append("Footnote Guide:\n")
-                                            withStyle(SpanStyle(color = Color(0xFF1976D2))) { append("• tn (Translator's Note):") }
+                                            withStyle(SpanStyle(color = if (isDark) Color(0xFF64B5F6) else Color(0xFF1976D2))) { append("• tn (Translator's Note):") }
                                             append(" Explains translation decisions, grammar, and literal phrasing.\n")
-                                            withStyle(SpanStyle(color = Color(0xFF388E3C))) { append("• sn (Study Note):") }
+                                            withStyle(SpanStyle(color = if (isDark) Color(0xFF81C784) else Color(0xFF388E3C))) { append("• sn (Study Note):") }
                                             append(" Provides historical, theological, or cultural context.\n")
-                                            withStyle(SpanStyle(color = Color(0xFFD32F2F))) { append("• tc (Text-Critical Note):") }
+                                            withStyle(SpanStyle(color = if (isDark) Color(0xFFE57373) else Color(0xFFD32F2F))) { append("• tc (Text-Critical Note):") }
                                             append(" Discusses ancient manuscript variations.")
                                         }
                                         Text(
@@ -440,20 +442,20 @@ fun TranslationsInfoSection(context: Context) {
                                     if (version.code == "lxx") {
                                         val lxxLegend = buildAnnotatedString {
                                             append("Grammar Color Guide:\n")
-                                            withStyle(SpanStyle(color = Color(0xFFD32F2F))) { append("• Verbs") }
+                                            withStyle(SpanStyle(color = if (isDark) Color(0xFFE57373) else Color(0xFFD32F2F))) { append("• Verbs") }
                                             append(" are Red\n")
-                                            withStyle(SpanStyle(color = Color(0xFF1976D2))) { append("• Nouns") }
+                                            withStyle(SpanStyle(color = if (isDark) Color(0xFF64B5F6) else Color(0xFF1976D2))) { append("• Nouns") }
                                             append(" are Blue\n")
                                             append("• Participles are ")
-                                            withStyle(SpanStyle(color = Color(0xFFD32F2F))) { append("Red") }
+                                            withStyle(SpanStyle(color = if (isDark) Color(0xFFE57373) else Color(0xFFD32F2F))) { append("Red") }
                                             append(" with ")
-                                            withStyle(SpanStyle(color = Color(0xFF1976D2))) { append("Blue") }
+                                            withStyle(SpanStyle(color = if (isDark) Color(0xFF64B5F6) else Color(0xFF1976D2))) { append("Blue") }
                                             append(" endings\n")
-                                            withStyle(SpanStyle(color = Color(0xFF388E3C))) { append("• Prepositions & Conjunctions") }
+                                            withStyle(SpanStyle(color = if (isDark) Color(0xFF81C784) else Color(0xFF388E3C))) { append("• Prepositions & Conjunctions") }
                                             append(" are Green\n")
-                                            withStyle(SpanStyle(color = Color(0xFF1976D2), textDecoration = TextDecoration.Underline)) { append("• Adjectives") }
+                                            withStyle(SpanStyle(color = if (isDark) Color(0xFF64B5F6) else Color(0xFF1976D2), textDecoration = TextDecoration.Underline)) { append("• Adjectives") }
                                             append(" are underlined in Blue\n")
-                                            withStyle(SpanStyle(color = Color(0xFFD32F2F), textDecoration = TextDecoration.Underline)) { append("• Adverbs") }
+                                            withStyle(SpanStyle(color = if (isDark) Color(0xFFE57373) else Color(0xFFD32F2F), textDecoration = TextDecoration.Underline)) { append("• Adverbs") }
                                             append(" are underlined in Red\n")
                                             withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("• Bold text") }
                                             append(" indicates emphasis (e.g., imperative commands, personal/reflexive pronouns, and strong negations like οὐ μή).")
@@ -471,17 +473,17 @@ fun TranslationsInfoSection(context: Context) {
                                     if (version.code == "heb") {
                                         val hebLegend = buildAnnotatedString {
                                             append("Grammar Color Guide:\n")
-                                            withStyle(SpanStyle(color = Color(0xFFD32F2F))) { append("• Verbs & Participles") }
+                                            withStyle(SpanStyle(color = if (isDark) Color(0xFFE57373) else Color(0xFFD32F2F))) { append("• Verbs & Participles") }
                                             append(" are Red\n")
-                                            withStyle(SpanStyle(color = Color(0xFF1976D2))) { append("• Nouns") }
+                                            withStyle(SpanStyle(color = if (isDark) Color(0xFF64B5F6) else Color(0xFF1976D2))) { append("• Nouns") }
                                             append(" are Blue\n")
-                                            withStyle(SpanStyle(color = Color(0xFF7B1FA2))) { append("• Adjectives") }
+                                            withStyle(SpanStyle(color = if (isDark) Color(0xFFBA68C8) else Color(0xFF7B1FA2))) { append("• Adjectives") }
                                             append(" are Purple\n")
-                                            withStyle(SpanStyle(color = Color(0xFF0097A7))) { append("• Adverbs") }
+                                            withStyle(SpanStyle(color = if (isDark) Color(0xFF4DD0E1) else Color(0xFF0097A7))) { append("• Adverbs") }
                                             append(" are Cyan\n")
-                                            withStyle(SpanStyle(color = Color(0xFF388E3C))) { append("• Prepositions") }
+                                            withStyle(SpanStyle(color = if (isDark) Color(0xFF81C784) else Color(0xFF388E3C))) { append("• Prepositions") }
                                             append(" are Green\n")
-                                            withStyle(SpanStyle(color = Color(0xFFF57C00))) { append("• Conjunctions") }
+                                            withStyle(SpanStyle(color = if (isDark) Color(0xFFFFB74D) else Color(0xFFF57C00))) { append("• Conjunctions") }
                                             append(" are Orange")
                                         }
                                         Text(
@@ -1900,6 +1902,7 @@ fun FormattedTextWithFootnotes(
     textStyle: TextStyle = MaterialTheme.typography.bodyLarge,
     linkEntirePhrase: Boolean = false
 ) {
+    val isDark = isSystemInDarkTheme()
     val annotatedString = buildAnnotatedString {
 
         // Unified parser that handles both HTML (Greek) and Bracket tags (Hebrew)
@@ -1929,9 +1932,9 @@ fun FormattedTextWithFootnotes(
                             tag.startsWith("<span") -> {
                                 val colorStr = Regex("""color:([a-z]+)""").find(tag)?.groupValues?.get(1)
                                 val color = when (colorStr) {
-                                    "red" -> Color(0xFFD32F2F)
-                                    "blue" -> Color(0xFF1976D2)
-                                    "green" -> Color(0xFF388E3C)
+                                    "red" -> if (isDark) Color(0xFFE57373) else Color(0xFFD32F2F)
+                                    "blue" -> if (isDark) Color(0xFF64B5F6) else Color(0xFF1976D2)
+                                    "green" -> if (isDark) Color(0xFF81C784) else Color(0xFF388E3C)
                                     else -> Color.Unspecified
                                 }
                                 styles.add(SpanStyle(color = color))
@@ -1963,12 +1966,12 @@ fun FormattedTextWithFootnotes(
 
                     if (showGrammarColors) {
                         val color = when (tag) {
-                            "n" -> Color(0xFF1976D2) // Blue
-                            "v", "v_imp", "ptc" -> Color(0xFFD32F2F) // Red
-                            "prep" -> Color(0xFF388E3C) // Green
-                            "conj" -> Color(0xFFF57C00) // Orange
-                            "a" -> Color(0xFF7B1FA2) // Purple
-                            "adv" -> Color(0xFF0097A7) // Cyan
+                            "n" -> if (isDark) Color(0xFF64B5F6) else Color(0xFF1976D2) // Blue
+                            "v", "v_imp", "ptc" -> if (isDark) Color(0xFFE57373) else Color(0xFFD32F2F) // Red
+                            "prep" -> if (isDark) Color(0xFF81C784) else Color(0xFF388E3C) // Green
+                            "conj" -> if (isDark) Color(0xFFFFB74D) else Color(0xFFF57C00) // Orange
+                            "a" -> if (isDark) Color(0xFFBA68C8) else Color(0xFF7B1FA2) // Purple
+                            "adv" -> if (isDark) Color(0xFF4DD0E1) else Color(0xFF0097A7) // Cyan
                             else -> Color.Unspecified
                         }
                         withStyle(SpanStyle(color = color)) {
@@ -1997,9 +2000,9 @@ fun FormattedTextWithFootnotes(
             val linkColor = when {
                 footnoteStyle == FootnoteStyle.HIDDEN -> Color.Unspecified
                 !showFootnoteColors -> MaterialTheme.colorScheme.primary
-                noteType == "tn" -> Color(0xFF1976D2) // Blue for Translator's Notes
-                noteType == "sn" -> Color(0xFF388E3C) // Green for Study Notes
-                noteType == "tc" -> Color(0xFFD32F2F) // Red for Text-Critical Notes
+                noteType == "tn" -> if (isDark) Color(0xFF64B5F6) else Color(0xFF1976D2) // Blue for Translator's Notes
+                noteType == "sn" -> if (isDark) Color(0xFF81C784) else Color(0xFF388E3C) // Green for Study Notes
+                noteType == "tc" -> if (isDark) Color(0xFFE57373) else Color(0xFFD32F2F) // Red for Text-Critical Notes
                 else -> MaterialTheme.colorScheme.primary // Default fallback
             }
 
