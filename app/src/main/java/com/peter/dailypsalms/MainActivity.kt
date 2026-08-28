@@ -539,7 +539,8 @@ enum class BibleCategory(val displayName: String) {
 }
 
 enum class BibleVersion(val code: String, val displayName: String, val description: String, val category: BibleCategory) {
-BSB("bsb", "BSB", "Berean Standard Bible (2016). A modern translation that balances strict accuracy to the original texts with high readability.", BibleCategory.MODERN),
+    BCP("bcp", "BCP (Coverdale)", "Book of Common Prayer (1928). Features the historic Coverdale Psalter, renowned for its lyrical flow and musical cadence.", BibleCategory.HISTORICAL),
+    BSB("bsb", "BSB", "Berean Standard Bible (2016). A modern translation that balances strict accuracy to the original texts with high readability.", BibleCategory.MODERN),
     DRA("dra", "Douay-Rheims", "Douay-Rheims American Edition (1899). The traditional English Catholic Bible, translated directly from the Latin Vulgate.", BibleCategory.HISTORICAL),
     GNV("gnv", "Geneva", "Geneva Bible (1599). The Bible of the Protestant Reformation, famous for its extensive historical and theological study notes.", BibleCategory.HISTORICAL),
     KJV("kjv", "KJV", "King James Version (1611). The most influential English translation in history, known for its majestic and poetic language.", BibleCategory.HISTORICAL),
@@ -739,11 +740,11 @@ class MainActivity : ComponentActivity() {
 
                                         val readingTrackKey = stringPreferencesKey("reading_track")
                                         val graceDayKey = stringPreferencesKey("grace_day")
-                                        val bibleVersionKey = stringPreferencesKey("bible_version")
 
                                         p[readingTrackKey] = selectedTrack.name
                                         p[graceDayKey] = selectedGraceDay.name
-                                        p[bibleVersionKey] = selectedVersion.code
+                                        p[stringPreferencesKey("psalms_version")] = selectedVersion.code
+                                        p[stringPreferencesKey("proverbs_version")] = selectedVersion.code
                                         p[stringPreferencesKey("plan_start_date")] = LocalDate.now().toString()
                                     }
                                 }
@@ -783,7 +784,10 @@ fun MainAppContainer(
     val checkmarksDateKey = stringPreferencesKey("checkmarks_date")
     val completedChaptersKey = stringSetPreferencesKey("completed_chapters")
     val footnoteStyleKey = stringPreferencesKey("footnote_style")
-    val bibleVersionKey = stringPreferencesKey("bible_version")
+    val psalmsVersionKey = stringPreferencesKey("psalms_version")
+    val proverbsVersionKey = stringPreferencesKey("proverbs_version")
+    val psalmsVersionCode = prefs[psalmsVersionKey] ?: BibleVersion.BSB.code
+    val proverbsVersionCode = prefs[proverbsVersionKey] ?: BibleVersion.BSB.code
     val fontSizeKey = stringPreferencesKey("font_size")
     val showGrammarColorsKey = booleanPreferencesKey("show_grammar_colors")
     val showFootnoteColorsKey = booleanPreferencesKey("show_footnote_colors")
@@ -805,17 +809,6 @@ fun MainAppContainer(
     val currentGraceDay = try {
         GraceDayOption.valueOf(prefs[graceDayKey] ?: GraceDayOption.NONE.name)
     } catch (_: Exception) { GraceDayOption.NONE }
-
-    // DEFAULT BIBLE VERSION
-    val preferredVersionCode = prefs[bibleVersionKey] ?: BibleVersion.BSB.code
-    val safeVersionCode = if (isAssetExists(context, "psalms_$preferredVersionCode.json")) {
-        preferredVersionCode
-    } else {
-        BibleVersion.BSB.code
-    }
-
-    val currentBibleVersion = BibleVersion.entries.find { it.code == safeVersionCode } ?: BibleVersion.WEB
-    val repo = remember(currentBibleVersion) { BibleRepository(context, currentBibleVersion.code) }
 
     var allPsalms by remember { mutableStateOf<List<ChapterData>>(emptyList()) }
     var allProverbs by remember { mutableStateOf<List<ChapterData>>(emptyList()) }
@@ -867,16 +860,16 @@ fun MainAppContainer(
 
     var todayPlaylist by remember { mutableStateOf<List<DailyReading>>(emptyList()) }
 
-    LaunchedEffect(currentBibleVersion, currentTrack, currentGraceDay, todayStr) {
+    LaunchedEffect(psalmsVersionCode, proverbsVersionCode, currentTrack, currentGraceDay, todayStr) {
         isLoading = true
         withContext(Dispatchers.IO) {
-            val loadedPsalms = repo.loadPsalms()
-            val loadedProverbs = repo.loadProverbs()
+            val loadedPsalms = BibleRepository(context, psalmsVersionCode).loadPsalms()
+            val loadedProverbs = BibleRepository(context, proverbsVersionCode).loadProverbs()
 
-            val activeLexiconFileName = when (currentBibleVersion) {
-                BibleVersion.VULGATE -> "latin_lexicon.json"
-                BibleVersion.LXX -> "greek_lexicon.json"
-                BibleVersion.HEB -> "hebrew_lexicon.json"
+            val activeLexiconFileName = when {
+                psalmsVersionCode == "heb" || proverbsVersionCode == "heb" -> "hebrew_lexicon.json"
+                psalmsVersionCode == "lxx" || proverbsVersionCode == "lxx" -> "greek_lexicon.json"
+                psalmsVersionCode == "vulgate" || proverbsVersionCode == "vulgate" -> "latin_lexicon.json"
                 else -> null
             }
 
@@ -1139,11 +1132,13 @@ fun MainAppContainer(
                 coroutineScope.launch { context.dataStore.edit { p -> p[showHeadingsKey] = show } }
             }
 
-            val updateBibleVersion = { version: BibleVersion ->
+            val updateBibleVersion = { version: BibleVersion, book: String ->
                 coroutineScope.launch {
                     context.dataStore.edit { p ->
-                        p[bibleVersionKey] = version.code
-                        if (version == BibleVersion.LXX || version == BibleVersion.HEB || version == BibleVersion.VULGATE) {
+                        if (book == "Psalms") p[psalmsVersionKey] = version.code
+                        else p[proverbsVersionKey] = version.code
+
+                        if (version == BibleVersion.LXX || version == BibleVersion.HEB) {
                             p[footnoteStyleKey] = FootnoteStyle.HIDDEN.name
                         } else if (p[footnoteStyleKey] == FootnoteStyle.HIDDEN.name) {
                             p[footnoteStyleKey] = FootnoteStyle.INLINE.name
@@ -1161,7 +1156,7 @@ fun MainAppContainer(
                     CircularProgressIndicator()
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Loading ${currentBibleVersion.displayName}...",
+                        text = $$"Loading ${psalmsVersionCode.uppercase()} & ${proverbsVersionCode.uppercase()}...",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1169,18 +1164,19 @@ fun MainAppContainer(
             } else if (readerContext != null) {
                 ActiveChapterReaderScreen(
                     readerContext = readerContext!!,
+                    psalmsVersionCode = psalmsVersionCode,
+                    proverbsVersionCode = proverbsVersionCode,
                     completedChapters = completedChapters,
                     currentFootnoteStyle = currentFootnoteStyle,
-                    currentBibleVersion = currentBibleVersion,
                     currentFontSize = currentFontSizeOption,
                     showGrammarColors = currentShowGrammar,
                     showFootnoteColors = currentShowFootnoteColors,
                     showHeadings = currentShowHeadings,
                     activeLexicon = activeLexicon,
                     onFootnoteStyleChange = { updateFootnoteStyle(it) },
-                    onBibleVersionChange = { version, currentPage, targetVerse ->
+                    onBibleVersionChange = { version, currentPage, book, targetVerse ->
                         readerContext = readerContext?.copy(initialIndex = currentPage, targetVerse = targetVerse)
-                        updateBibleVersion(version)
+                        updateBibleVersion(version, book)
                     },
                     onFontSizeChange = { updateFontSize(it) },
                     onGrammarColorsChange = { updateGrammarColors(it) },
@@ -1500,14 +1496,15 @@ fun ActiveChapterReaderScreen(
     readerContext: ReaderContext,
     completedChapters: Set<String>,
     currentFootnoteStyle: FootnoteStyle,
-    currentBibleVersion: BibleVersion,
+    psalmsVersionCode: String,
+    proverbsVersionCode: String,
     currentFontSize: FontSizeOption,
     showGrammarColors: Boolean,
     showFootnoteColors: Boolean,
     showHeadings: Boolean,
     activeLexicon: Map<String, String>,
     onFootnoteStyleChange: (FootnoteStyle) -> Unit,
-    onBibleVersionChange: (BibleVersion, Int, Int?) -> Unit,
+    onBibleVersionChange: (BibleVersion, Int, String, Int?) -> Unit,
     onFontSizeChange: (FontSizeOption) -> Unit,
     onGrammarColorsChange: (Boolean) -> Unit,
     onFootnoteColorsChange: (Boolean) -> Unit,
@@ -1527,6 +1524,11 @@ fun ActiveChapterReaderScreen(
         initialPage = readerContext.initialIndex,
         pageCount = { readerContext.playlist.size }
     )
+
+    val currentChapter = readerContext.playlist[pagerState.currentPage]
+    val activeBook = currentChapter.normalizedBook
+    val activeVersionCode = if (activeBook == "Psalms") psalmsVersionCode else proverbsVersionCode
+    val currentBibleVersion = BibleVersion.entries.find { it.code == activeVersionCode } ?: BibleVersion.WEB
 
     val hasFootnotes = remember(readerContext.playlist) {
         readerContext.playlist.any { it.footnotes.isNotEmpty() }
@@ -1590,9 +1592,9 @@ fun ActiveChapterReaderScreen(
                                 expanded = versionMenuExpanded,
                                 onDismissRequest = { versionMenuExpanded = false }
                             ) {
-                                val availableVersions = remember {
+                                val availableVersions = remember(activeBook) {
                                     BibleVersion.entries.filter { version ->
-                                        isAssetExists(context, "psalms_${version.code}.json")
+                                        isAssetExists(context, "${activeBook.lowercase()}_${version.code}.json")
                                     }
                                 }
 
@@ -1618,7 +1620,7 @@ fun ActiveChapterReaderScreen(
                                                 )
                                             },
                                             onClick = {
-                                                onBibleVersionChange(version, pagerState.currentPage, activeVerseNumber)
+                                                onBibleVersionChange(version, pagerState.currentPage, activeBook, activeVerseNumber)
                                                 versionMenuExpanded = false
                                             }
                                         )
@@ -1726,9 +1728,6 @@ fun ActiveChapterReaderScreen(
 
                                 // Conditional: Only show if Original Languages are selected
                                 if (currentBibleVersion == BibleVersion.HEB || currentBibleVersion == BibleVersion.LXX) {
-                                    if (showFootnoteOptions) {
-                                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                                    }
                                     Text(
                                         text = "Language Tools",
                                         style = MaterialTheme.typography.labelMedium,
