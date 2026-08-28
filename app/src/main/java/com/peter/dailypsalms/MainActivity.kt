@@ -1156,7 +1156,7 @@ fun MainAppContainer(
                     CircularProgressIndicator()
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = $$"Loading ${psalmsVersionCode.uppercase()} & ${proverbsVersionCode.uppercase()}...",
+                        text = "Loading ${psalmsVersionCode.uppercase()} (Psalms) & ${proverbsVersionCode.uppercase()} (Proverbs)...",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
