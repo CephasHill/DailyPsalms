@@ -539,8 +539,9 @@ enum class BibleCategory(val displayName: String) {
 }
 
 enum class BibleVersion(val code: String, val displayName: String, val description: String, val category: BibleCategory) {
-    BCP("bcp", "BCP (Coverdale)", "Book of Common Prayer (1928). Features the historic Coverdale Psalter, renowned for its lyrical flow and musical cadence.", BibleCategory.HISTORICAL),
     BSB("bsb", "BSB", "Berean Standard Bible (2016). A modern translation that balances strict accuracy to the original texts with high readability.", BibleCategory.MODERN),
+    BCP("bcp", "BCP (Coverdale)", "Book of Common Prayer (1928). Features the historic Coverdale Psalter, renowned for its lyrical flow and musical cadence.", BibleCategory.HISTORICAL),
+
     DRA("dra", "Douay-Rheims", "Douay-Rheims American Edition (1899). The traditional English Catholic Bible, translated directly from the Latin Vulgate.", BibleCategory.HISTORICAL),
     GNV("gnv", "Geneva", "Geneva Bible (1599). The Bible of the Protestant Reformation, famous for its extensive historical and theological study notes.", BibleCategory.HISTORICAL),
     KJV("kjv", "KJV", "King James Version (1611). The most influential English translation in history, known for its majestic and poetic language.", BibleCategory.HISTORICAL),
