@@ -155,12 +155,17 @@ fun MainAppContainer(
     val hasSeenOnboardingKey = booleanPreferencesKey("has_seen_onboarding")
     val planStartDateKey = stringPreferencesKey("plan_start_date")
     val showHeadingsKey = booleanPreferencesKey("show_headings")
+    val historicalDatesKey = stringSetPreferencesKey("historical_dates")
+    val recordStreakKey = intPreferencesKey("record_streak")
 
 
     // Read the current states (with defaults)
     val currentTrack = try {
         ReadingTrack.valueOf(prefs[readingTrackKey] ?: ReadingTrack.CLASSIC.name)
     } catch (_: Exception) { ReadingTrack.CLASSIC }
+
+    val historicalDates = prefs[historicalDatesKey] ?: emptySet()
+    val recordStreak = prefs[recordStreakKey] ?: 0
 
     val currentGraceDay = try {
         GraceDayOption.valueOf(prefs[graceDayKey] ?: GraceDayOption.NONE.name)
@@ -454,17 +459,32 @@ fun MainAppContainer(
                         p[intPreferencesKey("widget_done_count")] = newValidChapters.size
                         p[intPreferencesKey("widget_total_count")] = todayPlaylist.size
 
+                        val currentHistorical = p[historicalDatesKey] ?: emptySet()
+
                         if (isNow100) {
                             val last100 = p[last100DateKey] ?: p[legacyLast100DateKey] ?: ""
                             val currentStreak = p[streakKey] ?: 0
 
+                            p[historicalDatesKey] = currentHistorical + todayStr
+
                             if (last100 != todayStr) {
-                                if (last100 == yesterdayStr || (last100 == "" && currentStreak > 0)) {
-                                    p[streakKey] = currentStreak + 1
-                                } else {
-                                    p[streakKey] = 1
-                                }
+                                val isWithinCycle = try {
+                                    if (last100.isNotEmpty()) {
+                                        val lastDate = LocalDate.parse(last100)
+                                        !lastDate.isBefore(cycleStartDate.minusDays(1))
+                                    } else {
+                                        currentStreak > 0
+                                    }
+                                } catch (_: Exception) { false }
+
+                                val newStreak = if (isWithinCycle) currentStreak + 1 else 1
+                                p[streakKey] = newStreak
                                 p[last100DateKey] = todayStr
+
+                                val currentRecord = p[recordStreakKey] ?: 0
+                                if (newStreak > currentRecord) {
+                                    p[recordStreakKey] = newStreak
+                                }
                             }
                         } else {
                             val last100 = p[last100DateKey] ?: p[legacyLast100DateKey] ?: ""
@@ -472,6 +492,8 @@ fun MainAppContainer(
                                 val currentStreak = p[streakKey] ?: 1
                                 p[streakKey] = maxOf(0, currentStreak - 1)
                                 p[last100DateKey] = yesterdayStr
+
+                                p[historicalDatesKey] = currentHistorical - todayStr
                             }
                         }
                     }
@@ -557,6 +579,8 @@ fun MainAppContainer(
                             playlist = todayPlaylist,
                             completedChapters = completedChapters,
                             streakCount = displayStreak,
+                            historicalDates = historicalDates,
+                            recordStreak = recordStreak,
                             onToggleComplete = { key -> toggleChapterCompletion(key) },
                             onChapterClick = { index ->
                                 readerContext = ReaderContext(

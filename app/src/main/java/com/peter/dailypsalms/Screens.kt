@@ -76,6 +76,8 @@ import androidx.core.net.toUri
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun AboutScreen(
@@ -310,6 +312,8 @@ fun DailyDashboardScreen(
     playlist: List<DailyReading>,
     completedChapters: Set<String>,
     streakCount: Int,
+    historicalDates: Set<String>,
+    recordStreak: Int,
     onToggleComplete: (String) -> Unit,
     onChapterClick: (Int) -> Unit,
     modifier: Modifier = Modifier
@@ -317,13 +321,27 @@ fun DailyDashboardScreen(
     val totalCount = playlist.size
     val doneCount = completedChapters.size
 
+    var showCalendar by remember { mutableStateOf(false) }
+
+    if (showCalendar) {
+        ProgressCalendarDialog(
+            historicalDates = historicalDates,
+            currentStreak = streakCount,
+            recordStreak = recordStreak,
+            onDismiss = { showCalendar = false }
+        )
+    }
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp)
     ) {
         item {
             Card(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+                    .clickable { showCalendar = true },
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -419,6 +437,123 @@ fun DailyDashboardScreen(
             }
         }
     }
+}
+
+@Composable
+fun ProgressCalendarDialog(
+    historicalDates: Set<String>,
+    currentStreak: Int,
+    recordStreak: Int,
+    onDismiss: () -> Unit
+) {
+    var currentMonth by remember { mutableStateOf(LocalDate.now().withDayOfMonth(1)) }
+    val today = remember { LocalDate.now() }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        },
+        title = {
+            Text("Reading History", fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // Streak Stats
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("🔥 $currentStreak", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text("Current Streak", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("👑 $recordStreak", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text("Best Streak", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
+
+                // Month Navigation
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { currentMonth = currentMonth.minusMonths(1) }) {
+                        Text("<", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    }
+                    Text(
+                        text = currentMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    IconButton(
+                        onClick = { currentMonth = currentMonth.plusMonths(1) },
+                        enabled = currentMonth.isBefore(today.withDayOfMonth(1))
+                    ) {
+                        Text(">", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = if (currentMonth.isBefore(today.withDayOfMonth(1))) MaterialTheme.colorScheme.onSurface else Color.Transparent)
+                    }
+                }
+
+                // Calendar Grid
+                val daysInMonth = currentMonth.lengthOfMonth()
+                val firstDayOfWeek = currentMonth.dayOfWeek.value // Monday = 1, Sunday = 7
+                val startOffset = if (firstDayOfWeek == 7) 0 else firstDayOfWeek
+
+                val daysList = mutableListOf<Int?>()
+                repeat(startOffset) { daysList.add(null) }
+                for (i in 1..daysInMonth) { daysList.add(i) }
+                while (daysList.size % 7 != 0) { daysList.add(null) }
+
+                // Day Headers
+                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    listOf("S", "M", "T", "W", "T", "F", "S").forEach { day ->
+                        Text(text = day, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    }
+                }
+
+                // Days
+                Column {
+                    daysList.chunked(7).forEach { week ->
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            week.forEach { day ->
+                                Box(
+                                    modifier = Modifier.weight(1f).aspectRatio(1f),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (day != null) {
+                                        val dateStr = currentMonth.withDayOfMonth(day).toString()
+                                        val isDone = historicalDates.contains(dateStr)
+                                        val isToday = dateStr == today.toString()
+
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize(0.8f)
+                                                .background(
+                                                    color = if (isDone) MaterialTheme.colorScheme.primary else if (isToday) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                                                    shape = androidx.compose.foundation.shape.CircleShape
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = day.toString(),
+                                                color = if (isDone) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = if (isToday || isDone) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
 }
 
 @Composable
