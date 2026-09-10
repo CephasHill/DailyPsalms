@@ -424,7 +424,28 @@ fun FormattedTextWithFootnotes(
     val isDark = isSystemInDarkTheme()
     val annotatedString = buildAnnotatedString {
 
-        // Unified parser that handles both HTML (Greek) and Bracket tags (Hebrew)
+        // 1. Helper to dynamically style LORD and GOD
+        val divineNameRegex = Regex("""\b(LORD|GOD)\b""")
+        fun appendWithSmallCaps(str: String) {
+            var last = 0
+            for (match in divineNameRegex.findAll(str)) {
+                // Append everything before the match
+                append(str.substring(last, match.range.first))
+
+                // Append the first letter normally (L or G), shrink the rest (ORD or OD)
+                val word = match.value
+                append(word.substring(0, 1))
+                withStyle(SpanStyle(fontSize = 0.8.em)) {
+                    append(word.substring(1))
+                }
+                last = match.range.last + 1
+            }
+            if (last < str.length) {
+                append(str.substring(last))
+            }
+        }
+
+        // 2. Unified parser that handles both HTML (Greek) and Bracket tags (Hebrew)
         fun appendParsedText(str: String) {
             if (str.contains("<span") || str.contains("<b>") || str.contains("<u>")) {
                 val htmlRegex = Regex("""</?(span[^>]*|b|u)>""")
@@ -437,9 +458,9 @@ fun FormattedTextWithFootnotes(
                         if (showGrammarColors && styles.isNotEmpty()) {
                             var currentStyle = SpanStyle()
                             styles.forEach { currentStyle = currentStyle.merge(it) }
-                            withStyle(currentStyle) { append(chunk) }
+                            withStyle(currentStyle) { appendWithSmallCaps(chunk) }
                         } else {
-                            append(chunk)
+                            appendWithSmallCaps(chunk)
                         }
                     }
 
@@ -470,39 +491,39 @@ fun FormattedTextWithFootnotes(
                     if (showGrammarColors && styles.isNotEmpty()) {
                         var currentStyle = SpanStyle()
                         styles.forEach { currentStyle = currentStyle.merge(it) }
-                        withStyle(currentStyle) { append(chunk) }
+                        withStyle(currentStyle) { appendWithSmallCaps(chunk) }
                     } else {
-                        append(chunk)
+                        appendWithSmallCaps(chunk)
                     }
                 }
             } else {
                 val grammarRegex = Regex("""\[([a-z_]+)](.*?)\[/\1]""")
                 var localLastIndex = 0
                 for (match in grammarRegex.findAll(str)) {
-                    append(str.substring(localLastIndex, match.range.first))
+                    appendWithSmallCaps(str.substring(localLastIndex, match.range.first))
                     val tag = match.groupValues[1]
                     val content = match.groupValues[2]
 
                     if (showGrammarColors) {
                         val color = when (tag) {
-                            "n" -> if (isDark) Color(0xFF64B5F6) else Color(0xFF1976D2) // Blue
-                            "v", "v_imp", "ptc" -> if (isDark) Color(0xFFE57373) else Color(0xFFD32F2F) // Red
-                            "prep" -> if (isDark) Color(0xFF81C784) else Color(0xFF388E3C) // Green
-                            "conj" -> if (isDark) Color(0xFFFFB74D) else Color(0xFFF57C00) // Orange
-                            "a" -> if (isDark) Color(0xFFBA68C8) else Color(0xFF7B1FA2) // Purple
-                            "adv" -> if (isDark) Color(0xFF4DD0E1) else Color(0xFF0097A7) // Cyan
+                            "n" -> if (isDark) Color(0xFF64B5F6) else Color(0xFF1976D2)
+                            "v", "v_imp", "ptc" -> if (isDark) Color(0xFFE57373) else Color(0xFFD32F2F)
+                            "prep" -> if (isDark) Color(0xFF81C784) else Color(0xFF388E3C)
+                            "conj" -> if (isDark) Color(0xFFFFB74D) else Color(0xFFF57C00)
+                            "a" -> if (isDark) Color(0xFFBA68C8) else Color(0xFF7B1FA2)
+                            "adv" -> if (isDark) Color(0xFF4DD0E1) else Color(0xFF0097A7)
                             else -> Color.Unspecified
                         }
                         withStyle(SpanStyle(color = color)) {
-                            append(content)
+                            appendWithSmallCaps(content)
                         }
                     } else {
-                        append(content)
+                        appendWithSmallCaps(content)
                     }
                     localLastIndex = match.range.last + 1
                 }
                 if (localLastIndex < str.length) {
-                    append(str.substring(localLastIndex))
+                    appendWithSmallCaps(str.substring(localLastIndex))
                 }
             }
         }
@@ -510,24 +531,21 @@ fun FormattedTextWithFootnotes(
         var lastIndex = 0
 
         for (match in footnoteRegex.findAll(text)) {
-            val marker = match.groupValues[1] // This will cleanly extract "a", "b", etc.
+            val marker = match.groupValues[1]
 
-            // 2. LOOK UP THE TYPE FROM THE JSON ARRAY
             val noteType = footnotes.find { it.marker == marker }?.type ?: ""
 
-            // 3. ASSIGN THE COLOR
             val linkColor = when {
                 footnoteStyle == FootnoteStyle.HIDDEN -> Color.Unspecified
                 !showFootnoteColors -> MaterialTheme.colorScheme.primary
-                noteType == "tn" -> if (isDark) Color(0xFF64B5F6) else Color(0xFF1976D2) // Blue for Translator's Notes
-                noteType == "sn" -> if (isDark) Color(0xFF81C784) else Color(0xFF388E3C) // Green for Study Notes
-                noteType == "tc" -> if (isDark) Color(0xFFE57373) else Color(0xFFD32F2F) // Red for Text-Critical Notes
-                else -> MaterialTheme.colorScheme.primary // Default fallback
+                noteType == "tn" -> if (isDark) Color(0xFF64B5F6) else Color(0xFF1976D2)
+                noteType == "sn" -> if (isDark) Color(0xFF81C784) else Color(0xFF388E3C)
+                noteType == "tc" -> if (isDark) Color(0xFFE57373) else Color(0xFFD32F2F)
+                else -> MaterialTheme.colorScheme.primary
             }
 
             val precedingText = text.substring(lastIndex, match.range.first)
 
-            // 4. APPLY IT TO THE LINK
             val linkStyles = TextLinkStyles(style = SpanStyle(color = linkColor, textDecoration = TextDecoration.None))
             val link = LinkAnnotation.Clickable(marker, styles = linkStyles) { _ -> onFootnoteClick(marker) }
 
@@ -577,7 +595,6 @@ fun FormattedTextWithFootnotes(
                 }
 
                 val targetStartIndex = if (lastSpace == -1) 0 else lastSpace + 1
-
                 val beforeTarget = trimmedPreceding.substring(0, targetStartIndex)
                 val targetWord = trimmedPreceding.substring(targetStartIndex)
 
