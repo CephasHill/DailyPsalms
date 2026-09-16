@@ -2,7 +2,9 @@ package com.peter.dailypsalms
 
 import com.google.gson.annotations.SerializedName
 import java.time.LocalDate
+import androidx.annotation.Keep
 
+@Keep
 data class ChapterData(
     val book: String,
     val chapter: Int,
@@ -14,7 +16,7 @@ data class ChapterData(
 val ChapterData.normalizedBook: String
     get() = if (book.contains("Psalm", ignoreCase = true)) "Psalms" else "Proverbs"
 
-
+@Keep
 data class ContentItem(
     val type: String,
     val text: String? = null,
@@ -22,11 +24,13 @@ data class ContentItem(
     val lines: List<Line>? = null
 )
 
+@Keep
 data class Line(
     val text: String,
     val indent: Int
 )
 
+@Keep
 data class Footnote(
     val marker: String,
     val type: String? = null,
