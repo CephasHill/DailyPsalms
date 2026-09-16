@@ -247,7 +247,6 @@ fun AboutScreen(
         // ==========================================
         item {
             TranslationsInfoSection(context)
-            HorizontalDivider(modifier = Modifier.padding(vertical = 32.dp))
         }
     }
 
