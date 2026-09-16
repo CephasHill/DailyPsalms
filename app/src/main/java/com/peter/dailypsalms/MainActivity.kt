@@ -80,8 +80,6 @@ class MainActivity : ComponentActivity() {
             widgetAction = true
         }
 
-        scheduleMidnightWidgetUpdate(this)
-
         setContent {
             DailyPsalmsTheme {
                 val context = LocalContext.current

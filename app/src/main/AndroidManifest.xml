@@ -22,7 +22,6 @@
             </intent-filter>
         </activity>
 
-        <!-- NEW: The Glance Widget Receiver -->
         <receiver
             android:name=".ui.theme.DailyPsalmsWidgetReceiver"
             android:exported="true">
@@ -32,6 +31,21 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/daily_psalms_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".MidnightWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <!-- Triggers exactly when the device date rolls over to midnight -->
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <!-- Triggers if the user travels to a new time zone -->
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <!-- Triggers if the user manually changes their phone's clock -->
+                <action android:name="android.intent.action.TIME_SET" />
+                <!-- Triggers when the user unlocks their phone -->
+                <action android:name="android.intent.action.USER_PRESENT" />
+            </intent-filter>
         </receiver>
 
     </application>
