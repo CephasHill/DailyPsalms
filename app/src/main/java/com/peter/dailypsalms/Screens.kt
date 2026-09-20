@@ -92,6 +92,9 @@ fun AboutScreen(
     val context = LocalContext.current
     var showCreditsDialog by remember { mutableStateOf(false) }
 
+    // State to hold the selected grace day while the confirmation dialog is open
+    var pendingGraceDay by remember { mutableStateOf<GraceDayOption?>(null) }
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -177,7 +180,10 @@ fun AboutScreen(
                             GraceDayOption.entries.forEach { day ->
                                 DropdownMenuItem(
                                     text = { Text(day.displayName) },
-                                    onClick = { onGraceDayChange(day); graceMenuExpanded = false }
+                                    onClick = {
+                                        pendingGraceDay = day
+                                        graceMenuExpanded = false
+                                    }
                                 )
                             }
                         }
@@ -204,7 +210,6 @@ fun AboutScreen(
                     Button(
                         onClick = {
                             val intent = Intent(Intent.ACTION_SENDTO).apply {
-                                // Swap to standard Uri.parse
                                 data = android.net.Uri.parse("mailto:p.hill.businesses@gmail.com")
                                 putExtra(Intent.EXTRA_SUBJECT, "Daily Psalms App Feedback")
                             }
@@ -250,6 +255,36 @@ fun AboutScreen(
         item {
             TranslationsInfoSection(context)
         }
+    }
+
+    // ==========================================
+    // 4. GRACE DAY CONFIRMATION DIALOG
+    // ==========================================
+    if (pendingGraceDay != null) {
+        AlertDialog(
+            onDismissRequest = { pendingGraceDay = null },
+            title = {
+                Text("Change Grace Day?", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text(
+                    "Changing your Grace Day will clear any incomplete catch-up chapters you currently have, starting you fresh from today. \n\nDon't worry—your streak and reading history will not be affected!"
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    pendingGraceDay?.let { onGraceDayChange(it) }
+                    pendingGraceDay = null
+                }) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingGraceDay = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     // ==========================================
