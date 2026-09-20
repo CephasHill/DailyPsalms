@@ -476,8 +476,6 @@ fun MainAppContainer(
                             val last100 = p[last100DateKey] ?: p[legacyLast100DateKey] ?: ""
                             val currentStreak = p[streakKey] ?: 0
 
-                            p[historicalDatesKey] = currentHistorical + todayStr
-
                             if (last100 != todayStr) {
                                 val isWithinCycle = try {
                                     if (last100.isNotEmpty()) {
@@ -488,7 +486,25 @@ fun MainAppContainer(
                                     }
                                 } catch (_: Exception) { false }
 
-                                val newStreak = if (isWithinCycle) currentStreak + 1 else 1
+                                // 1. Calculate gap dates and days to add
+                                val gapDates = mutableSetOf<String>()
+                                val daysToAdd = if (last100.isNotEmpty() && isWithinCycle) {
+                                    val lastDate = try { LocalDate.parse(last100) } catch(e: Exception) { todayDate }
+                                    var curr = lastDate.plusDays(1)
+                                    while (!curr.isAfter(todayDate)) {
+                                        gapDates.add(curr.toString())
+                                        curr = curr.plusDays(1)
+                                    }
+                                    java.time.temporal.ChronoUnit.DAYS.between(lastDate, todayDate).toInt().coerceAtLeast(1)
+                                } else {
+                                    gapDates.add(todayStr)
+                                    1
+                                }
+
+                                // 2. Backfill the calendar and award multiple streak points
+                                p[historicalDatesKey] = currentHistorical + gapDates
+
+                                val newStreak = if (isWithinCycle) currentStreak + daysToAdd else 1
                                 p[streakKey] = newStreak
                                 p[last100DateKey] = todayStr
 
