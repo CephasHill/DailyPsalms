@@ -440,10 +440,23 @@ fun MainAppContainer(
 
         Box(modifier = Modifier.fillMaxSize()) {
             val toggleChapterCompletion = { key: String ->
-                val currentValidChapters = rawCompletedChapters.intersect(todayPlaylistKeys)
-                val was100 = currentValidChapters.size == todayPlaylist.size
+                // 1. Generate ALL valid keys for the current active cycle (not just today's visible ones)
+                val cycleKeys = cycleDates.flatMap { date ->
+                    getAssignedChapters(date, currentTrack).map { assignment ->
+                        val book = if (assignment.book.contains("Psalm", true)) "Psalms" else "Proverbs"
+                        val partSuffix = if (assignment.partId != null) "_part${assignment.partId}" else ""
+                        "${book}_${assignment.chapter}${partSuffix}_${assignment.assignedDate}"
+                    }
+                }.toSet()
+
+                // 2. Preserve ALL completed chapters within the cycle to prevent DataStore corruption
+                val currentValidChapters = rawCompletedChapters.intersect(cycleKeys)
                 val newValidChapters = if (currentValidChapters.contains(key)) currentValidChapters - key else currentValidChapters + key
-                val isNow100 = newValidChapters.size == todayPlaylist.size
+
+                // 3. Calculate if today's visible playlist is 100% complete
+                val activeDoneCount = newValidChapters.intersect(todayPlaylistKeys).size
+                val isNow100 = activeDoneCount == todayPlaylist.size
+                val was100 = rawCompletedChapters.intersect(todayPlaylistKeys).size == todayPlaylist.size
 
                 if (isNow100 && !was100) {
                     showExplosion = true
@@ -454,7 +467,7 @@ fun MainAppContainer(
                         p[checkmarksDateKey] = cycleStartStr
                         p[completedChaptersKey] = newValidChapters
 
-                        p[intPreferencesKey("widget_done_count")] = newValidChapters.size
+                        p[intPreferencesKey("widget_done_count")] = activeDoneCount
                         p[intPreferencesKey("widget_total_count")] = todayPlaylist.size
 
                         val currentHistorical = p[historicalDatesKey] ?: emptySet()
