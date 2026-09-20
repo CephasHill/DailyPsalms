@@ -189,7 +189,8 @@ fun MainAppContainer(
     var selectedTab by remember { mutableStateOf<NavigationTab>(NavigationTab.Daily) }
     var readerContext by remember { mutableStateOf<ReaderContext?>(null) }
 
-    val todayDate = remember { LocalDate.now() }
+    val todayDateState = remember { mutableStateOf(LocalDate.now()) }
+    val todayDate by todayDateState
     val todayStr = todayDate.toString()
     val yesterdayStr = todayDate.minusDays(1).toString()
 
@@ -230,7 +231,7 @@ fun MainAppContainer(
 
     var todayPlaylist by remember { mutableStateOf<List<DailyReading>>(emptyList()) }
 
-    LaunchedEffect(currentBibleVersion, currentTrack, currentGraceDay, todayStr) {
+    LaunchedEffect(currentBibleVersion, currentTrack, currentGraceDay, planStartDate, todayStr) {
         isLoading = true
         withContext(Dispatchers.IO) {
             val loadedPsalms = repo.loadPsalms()
@@ -261,7 +262,7 @@ fun MainAppContainer(
 
             // 1. Get all assignments for the whole cycle up to today, filtering out COMPLETED past days
             val fullCycleAssignments = cycleDates.flatMap { date ->
-                getAssignedChapters(date, currentTrack).filter { assignment ->
+                getAssignedChapters(date, currentTrack, planStartDate).filter { assignment ->
                     if (date.isBefore(todayDate)) {
                         // Reconstruct the key to check if it's already done
                         val book = if (assignment.book.contains("Psalm", true)) "Psalms" else "Proverbs"
@@ -355,8 +356,9 @@ fun MainAppContainer(
     LaunchedEffect(Unit) {
         while (true) {
             delay(1.minutes)
-            val liveTodayStr = LocalDate.now().toString()
-            if (liveTodayStr != todayStr) {
+            val liveToday = LocalDate.now()
+            if (liveToday != todayDateState.value) {
+                todayDateState.value = liveToday
                 DailyPsalmsWidget().updateAll(context)
             }
         }
@@ -442,7 +444,7 @@ fun MainAppContainer(
             val toggleChapterCompletion = { key: String ->
                 // 1. Generate ALL valid keys for the current active cycle (not just today's visible ones)
                 val cycleKeys = cycleDates.flatMap { date ->
-                    getAssignedChapters(date, currentTrack).map { assignment ->
+                    getAssignedChapters(date, currentTrack, planStartDate).map { assignment ->
                         val book = if (assignment.book.contains("Psalm", true)) "Psalms" else "Proverbs"
                         val partSuffix = if (assignment.partId != null) "_part${assignment.partId}" else ""
                         "${book}_${assignment.chapter}${partSuffix}_${assignment.assignedDate}"
@@ -644,6 +646,8 @@ fun MainAppContainer(
                                     context.dataStore.edit { p ->
                                         p[readingTrackKey] = newTrack.name
                                         p[planStartDateKey] = todayStr
+                                        p[checkmarksDateKey] = cycleStartStr
+                                        p[completedChaptersKey] = emptySet()
                                     }
                                 }
                             },

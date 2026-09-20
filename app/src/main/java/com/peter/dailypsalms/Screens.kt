@@ -92,6 +92,9 @@ fun AboutScreen(
     val context = LocalContext.current
     var showCreditsDialog by remember { mutableStateOf(false) }
 
+    // State to hold the selected track while the confirmation dialog is open
+    var pendingTrack by remember { mutableStateOf<ReadingTrack?>(null) }
+
     // State to hold the selected grace day while the confirmation dialog is open
     var pendingGraceDay by remember { mutableStateOf<GraceDayOption?>(null) }
 
@@ -161,7 +164,12 @@ fun AboutScreen(
                                             Text(track.description, style = MaterialTheme.typography.bodySmall)
                                         }
                                     },
-                                    onClick = { onTrackChange(track); trackMenuExpanded = false }
+                                    onClick = {
+                                        if (track != currentTrack) {
+                                            pendingTrack = track
+                                        }
+                                        trackMenuExpanded = false
+                                    }
                                 )
                             }
                         }
@@ -258,7 +266,38 @@ fun AboutScreen(
     }
 
     // ==========================================
-    // 4. GRACE DAY CONFIRMATION DIALOG
+    // 4. TRACK CONFIRMATION DIALOG
+    // ==========================================
+    if (pendingTrack != null) {
+        val selectedTrack = pendingTrack!!
+        AlertDialog(
+            onDismissRequest = { pendingTrack = null },
+            title = {
+                Text("Change Reading Track?", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text(
+                    "Switching to ${selectedTrack.displayName} starts a new reading plan today and clears the current track's saved reading progress, including catch-up items. Your streak and reading history will not be affected."
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    onTrackChange(selectedTrack)
+                    pendingTrack = null
+                }) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingTrack = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // ==========================================
+    // 5. GRACE DAY CONFIRMATION DIALOG
     // ==========================================
     if (pendingGraceDay != null) {
         AlertDialog(
@@ -288,7 +327,7 @@ fun AboutScreen(
     }
 
     // ==========================================
-    // 5. CREDITS DIALOG OVERLAY
+    // 6. CREDITS DIALOG OVERLAY
     // ==========================================
     if (showCreditsDialog) {
         AlertDialog(

@@ -37,6 +37,7 @@ class DailyPsalmsWidget : GlanceAppWidget() {
             val graceDayKey = stringPreferencesKey("grace_day")
             val checkmarksDateKey = stringPreferencesKey("checkmarks_date")
             val completedChaptersKey = stringSetPreferencesKey("completed_chapters")
+            val planStartDateKey = stringPreferencesKey("plan_start_date")
             val last100DateKey = stringPreferencesKey("last_100_date")
             val streakKey = intPreferencesKey("streak")
 
@@ -54,6 +55,12 @@ class DailyPsalmsWidget : GlanceAppWidget() {
                 GraceDayOption.valueOf(prefs[graceDayKey] ?: GraceDayOption.NONE.name)
             } catch (_: Exception) { GraceDayOption.NONE }
 
+            val planStartDate = try {
+                prefs[planStartDateKey]?.let { LocalDate.parse(it) } ?: todayDate
+            } catch (_: Exception) {
+                todayDate
+            }
+
             val cycleStartDate = getCycleStartDate(todayDate, currentGraceDay)
             val cycleStartStr = cycleStartDate.toString()
 
@@ -66,7 +73,7 @@ class DailyPsalmsWidget : GlanceAppWidget() {
             }
 
             // Calculate today's chapters dynamically
-            val assignedToday = getAssignedChapters(todayDate, currentTrack)
+            val assignedToday = getAssignedChapters(todayDate, currentTrack, planStartDate)
             val todayKeys = assignedToday.map { assignment ->
                 val book = if (assignment.book.contains("Psalm", true)) "Psalms" else "Proverbs"
                 val partSuffix = if (assignment.partId != null) "_part${assignment.partId}" else ""

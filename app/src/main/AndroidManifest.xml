@@ -35,7 +35,7 @@
 
         <receiver
             android:name=".MidnightWidgetReceiver"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <!-- Triggers exactly when the device date rolls over to midnight -->
                 <action android:name="android.intent.action.DATE_CHANGED" />

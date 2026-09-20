@@ -71,6 +71,7 @@ enum class BibleVersion(val code: String, val displayName: String, val descripti
 
 enum class ReadingTrack(val displayName: String, val description: String) {
     CLASSIC("Classic (5+1)", "5 Psalms & 1 Proverb daily (1 Month)"),
+    CLASSIC_PSALMS_ONLY("Classic (Psalms Only)", "5 Psalms daily (1 Month)"),
     PACED("Paced (1+1)", "1 Psalm & 1 Proverb daily (5 Months)"),
     PSALMS_ONLY("Psalms Only", "1 Psalm daily (150 Days)"),
     PROVERBS_ONLY("Proverbs Only", "1 Proverb daily (31 Days)")

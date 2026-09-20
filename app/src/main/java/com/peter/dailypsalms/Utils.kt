@@ -2,6 +2,7 @@ package com.peter.dailypsalms
 
 import android.content.Context
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import kotlin.collections.contains
 
 fun isAssetExists(context: Context, fileName: String): Boolean {
@@ -33,44 +34,59 @@ fun getCycleStartDate(today: LocalDate, graceDay: GraceDayOption): LocalDate {
     return start
 }
 
-fun getAssignedChapters(date: LocalDate, track: ReadingTrack): List<AssignedChapter> {
-    val dayOfYear = date.dayOfYear
+private fun getClassicPsalmAssignments(date: LocalDate): List<AssignedChapter> {
     val dayOfMonth = date.dayOfMonth
-    val list = mutableListOf<AssignedChapter>()
 
-    when (track) {
+    return if (dayOfMonth == 31) {
+        // Request 5 specific chunks instead of 1 chapter.
+        (1..5).map { partId ->
+            AssignedChapter("Psalms", 119, date, partId = partId)
+        }
+    } else {
+        listOf(dayOfMonth, dayOfMonth + 30, dayOfMonth + 60, dayOfMonth + 90, dayOfMonth + 120)
+            .filter { it <= 150 && (dayOfMonth != 29 || it != 119) }
+            .map { chapter -> AssignedChapter("Psalms", chapter, date) }
+    }
+}
+
+private fun getPlanDay(date: LocalDate, planStartDate: LocalDate): Int {
+    return ChronoUnit.DAYS.between(planStartDate, date)
+        .coerceAtLeast(0)
+        .toInt() + 1
+}
+
+private fun getCycledChapter(planDay: Int, cycleLength: Int): Int {
+    return ((planDay - 1) % cycleLength) + 1
+}
+
+fun getAssignedChapters(
+    date: LocalDate,
+    track: ReadingTrack,
+    planStartDate: LocalDate = date
+): List<AssignedChapter> {
+    val dayOfMonth = date.dayOfMonth
+    val planDay = getPlanDay(date, planStartDate)
+
+    return when (track) {
         ReadingTrack.CLASSIC -> {
-            if (dayOfMonth == 31) {
-                // Request 5 specific chunks instead of 1 chapter
-                list.add(AssignedChapter("Psalms", 119, date, partId = 1))
-                list.add(AssignedChapter("Psalms", 119, date, partId = 2))
-                list.add(AssignedChapter("Psalms", 119, date, partId = 3))
-                list.add(AssignedChapter("Psalms", 119, date, partId = 4))
-                list.add(AssignedChapter("Psalms", 119, date, partId = 5))
-            } else {
-                listOf(dayOfMonth, dayOfMonth + 30, dayOfMonth + 60, dayOfMonth + 90, dayOfMonth + 120)
-                    .filter { it <= 150 && (dayOfMonth != 19 || it != 119) }
-                    .forEach { list.add(AssignedChapter("Psalms", it, date)) }
-            }
-
-            list.add(AssignedChapter("Proverbs", dayOfMonth, date))
+            getClassicPsalmAssignments(date) + AssignedChapter("Proverbs", dayOfMonth, date)
+        }
+        ReadingTrack.CLASSIC_PSALMS_ONLY -> {
+            getClassicPsalmAssignments(date)
         }
         ReadingTrack.PACED -> {
-            val pChap = (dayOfYear % 150).takeIf { it != 0 } ?: 150
-            val prChap = (dayOfYear % 31).takeIf { it != 0 } ?: 31
-            list.add(AssignedChapter("Psalms", pChap, date))
-            list.add(AssignedChapter("Proverbs", prChap, date))
+            listOf(
+                AssignedChapter("Psalms", getCycledChapter(planDay, 150), date),
+                AssignedChapter("Proverbs", getCycledChapter(planDay, 31), date)
+            )
         }
         ReadingTrack.PSALMS_ONLY -> {
-            val pChap = (dayOfYear % 150).takeIf { it != 0 } ?: 150
-            list.add(AssignedChapter("Psalms", pChap, date))
+            listOf(AssignedChapter("Psalms", getCycledChapter(planDay, 150), date))
         }
         ReadingTrack.PROVERBS_ONLY -> {
-            val prChap = (dayOfYear % 31).takeIf { it != 0 } ?: 31
-            list.add(AssignedChapter("Proverbs", prChap, date))
+            listOf(AssignedChapter("Proverbs", getCycledChapter(planDay, 31), date))
         }
     }
-    return list
 }
 
 fun slicePsalm119(fullChapter: ChapterData, partId: Int): ChapterData {
