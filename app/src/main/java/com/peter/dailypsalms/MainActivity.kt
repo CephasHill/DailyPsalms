@@ -489,7 +489,7 @@ fun MainAppContainer(
                                 // 1. Calculate gap dates and days to add
                                 val gapDates = mutableSetOf<String>()
                                 val daysToAdd = if (last100.isNotEmpty() && isWithinCycle) {
-                                    val lastDate = try { LocalDate.parse(last100) } catch(e: Exception) { todayDate }
+                                    val lastDate = try { LocalDate.parse(last100) } catch(_: Exception) { todayDate }
                                     var curr = lastDate.plusDays(1)
                                     while (!curr.isAfter(todayDate)) {
                                         gapDates.add(curr.toString())
