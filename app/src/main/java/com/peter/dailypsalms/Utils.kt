@@ -34,6 +34,23 @@ fun getCycleStartDate(today: LocalDate, graceDay: GraceDayOption): LocalDate {
     return start
 }
 
+fun isGraceDay(date: LocalDate, graceDay: GraceDayOption): Boolean {
+    if (graceDay == GraceDayOption.NONE) return false
+
+    val graceDayOfWeek = when (graceDay) {
+        GraceDayOption.SUNDAY -> java.time.DayOfWeek.SUNDAY
+        GraceDayOption.MONDAY -> java.time.DayOfWeek.MONDAY
+        GraceDayOption.TUESDAY -> java.time.DayOfWeek.TUESDAY
+        GraceDayOption.WEDNESDAY -> java.time.DayOfWeek.WEDNESDAY
+        GraceDayOption.THURSDAY -> java.time.DayOfWeek.THURSDAY
+        GraceDayOption.FRIDAY -> java.time.DayOfWeek.FRIDAY
+        GraceDayOption.SATURDAY -> java.time.DayOfWeek.SATURDAY
+        GraceDayOption.NONE -> return false
+    }
+
+    return date.dayOfWeek == graceDayOfWeek
+}
+
 private fun getClassicPsalmAssignments(date: LocalDate): List<AssignedChapter> {
     val dayOfMonth = date.dayOfMonth
 

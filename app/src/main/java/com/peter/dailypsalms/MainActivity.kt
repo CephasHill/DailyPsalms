@@ -155,6 +155,8 @@ fun MainAppContainer(
     val showHeadingsKey = booleanPreferencesKey("show_headings")
     val historicalDatesKey = stringSetPreferencesKey("historical_dates")
     val recordStreakKey = intPreferencesKey("record_streak")
+    val pendingCatchUpDatesKey = stringSetPreferencesKey("pending_catch_up_dates")
+    val pendingCatchUpDateKey = stringPreferencesKey("pending_catch_up_date")
 
 
     // Read the current states (with defaults)
@@ -213,25 +215,80 @@ fun MainAppContainer(
         }
     }
 
-    // Generate all dates, but NEVER go further back than the planStartDate!
-    val cycleDates = remember(cycleStartDate, todayDate, planStartDate) {
+    val pendingCatchUpDates = prefs[pendingCatchUpDatesKey] ?: emptySet()
+
+    // Generate all scheduled dates in the active cycle through today. A Grace
+    // Day has no new assignment; it is reserved for unfinished assignments.
+    val cycleDates = remember(cycleStartDate, todayDate, planStartDate, currentGraceDay) {
         val effectiveStart = if (cycleStartDate.isBefore(planStartDate)) planStartDate else cycleStartDate
 
         generateSequence(effectiveStart) { d ->
             if (d.isBefore(todayDate)) d.plusDays(1) else null
         }.toList()
+            .let { dates ->
+                if (!isGraceDay(todayDate, currentGraceDay)) dates + todayDate else dates
+            }
+            .filterNot { isGraceDay(it, currentGraceDay) }
     }
 
     val checkmarksDate = prefs[checkmarksDateKey] ?: ""
-    val rawCompletedChapters = if (checkmarksDate == cycleStartStr) {
-        prefs[completedChaptersKey] ?: emptySet()
-    } else {
-        emptySet()
+    // Completion keys include their assignment date, so they can safely be
+    // retained across weekly cycle boundaries. This is also what lets us
+    // recognize a catch-up chapter from the previous cycle as completed.
+    val rawCompletedChapters = prefs[completedChaptersKey] ?: emptySet()
+
+    // Move unfinished assignments from a completed cycle into a durable
+    // pending set. Completed pending items remain visible for the rest of the
+    // day, then are removed on the next date boundary.
+    LaunchedEffect(todayStr, currentTrack, currentGraceDay, planStartDate, cycleStartStr, checkmarksDate) {
+        val storedPendingDates = prefs[pendingCatchUpDatesKey] ?: emptySet()
+        val storedPendingDate = prefs[pendingCatchUpDateKey]
+        val storedCompleted = prefs[completedChaptersKey] ?: emptySet()
+        val nextPendingDates = storedPendingDates.toMutableSet()
+
+        if (storedPendingDate != todayStr) {
+            nextPendingDates.removeAll { pendingDate ->
+                val date = try { LocalDate.parse(pendingDate) } catch (_: Exception) { null }
+                date != null && getAssignedChapters(date, currentTrack, planStartDate)
+                    .all { assignment ->
+                        val book = if (assignment.book.contains("Psalm", true)) "Psalms" else "Proverbs"
+                        val partSuffix = if (assignment.partId != null) "_part${assignment.partId}" else ""
+                        val key = "${book}_${assignment.chapter}${partSuffix}_${assignment.assignedDate}"
+                        storedCompleted.contains(key)
+                    }
+            }
+        }
+
+        if (checkmarksDate.isNotEmpty() && checkmarksDate != cycleStartStr) {
+            val previousCycleStart = try { LocalDate.parse(checkmarksDate) } catch (_: Exception) { null }
+            if (previousCycleStart != null && previousCycleStart.isBefore(cycleStartDate)) {
+                generateSequence(previousCycleStart) { date ->
+                    if (date.isBefore(cycleStartDate.minusDays(1))) date.plusDays(1) else null
+                }.toList()
+                    .filterNot { isGraceDay(it, currentGraceDay) }
+                    .forEach { date ->
+                        val assignments = getAssignedChapters(date, currentTrack, planStartDate)
+                        val hasIncompleteAssignment = assignments.any { assignment ->
+                            val book = if (assignment.book.contains("Psalm", true)) "Psalms" else "Proverbs"
+                            val partSuffix = if (assignment.partId != null) "_part${assignment.partId}" else ""
+                            val key = "${book}_${assignment.chapter}${partSuffix}_${assignment.assignedDate}"
+                            !storedCompleted.contains(key)
+                        }
+                        if (hasIncompleteAssignment) nextPendingDates += date.toString()
+                    }
+            }
+        }
+
+        context.dataStore.edit { p ->
+            p[pendingCatchUpDatesKey] = nextPendingDates
+            p[pendingCatchUpDateKey] = todayStr
+            p[checkmarksDateKey] = cycleStartStr
+        }
     }
 
     var todayPlaylist by remember { mutableStateOf<List<DailyReading>>(emptyList()) }
 
-    LaunchedEffect(currentBibleVersion, currentTrack, currentGraceDay, planStartDate, todayStr) {
+    LaunchedEffect(currentBibleVersion, currentTrack, currentGraceDay, planStartDate, todayStr, pendingCatchUpDates) {
         isLoading = true
         withContext(Dispatchers.IO) {
             val loadedPsalms = repo.loadPsalms()
@@ -260,10 +317,18 @@ fun MainAppContainer(
                 emptyMap()
             }
 
-            // 1. Get all assignments for the whole cycle up to today, filtering out COMPLETED past days
-            val fullCycleAssignments = cycleDates.flatMap { date ->
+            // Include durable catch-ups first, followed by this cycle's
+            // assignments. A pending date is intentionally not filtered by
+            // completion so a checked catch-up stays visible until tomorrow.
+            val allAssignmentDates = (pendingCatchUpDates.mapNotNull { dateString ->
+                try { LocalDate.parse(dateString) } catch (_: Exception) { null }
+            } + cycleDates).distinct().sorted()
+
+            val fullCycleAssignments = allAssignmentDates.flatMap { date ->
                 getAssignedChapters(date, currentTrack, planStartDate).filter { assignment ->
-                    if (date.isBefore(todayDate)) {
+                    if (pendingCatchUpDates.contains(date.toString())) {
+                        true
+                    } else if (date.isBefore(todayDate)) {
                         // Reconstruct the key to check if it's already done
                         val book = if (assignment.book.contains("Psalm", true)) "Psalms" else "Proverbs"
                         val partSuffix = if (assignment.partId != null) "_part${assignment.partId}" else ""
@@ -384,11 +449,27 @@ fun MainAppContainer(
     val last100Date = prefs[last100DateKey] ?: prefs[legacyLast100DateKey] ?: ""
     val actualStreak = prefs[streakKey] ?: 0
 
+    val hasUnfinishedCatchUp = cycleDates
+        .filter { it.isBefore(todayDate) }
+        .any { date ->
+            getAssignedChapters(date, currentTrack, planStartDate).any { assignment ->
+                val book = if (assignment.book.contains("Psalm", true)) "Psalms" else "Proverbs"
+                val partSuffix = if (assignment.partId != null) "_part${assignment.partId}" else ""
+                val key = "${book}_${assignment.chapter}${partSuffix}_${assignment.assignedDate}"
+                !rawCompletedChapters.contains(key)
+            }
+        }
+
     val displayStreak = when (last100Date) {
         todayStr -> actualStreak
         yesterdayStr -> actualStreak
         "" -> actualStreak // Recover widget-only streaks where the date key was missing or mismatched
-        else -> 0
+        else -> if (
+            actualStreak > 0 &&
+            (pendingCatchUpDates.isNotEmpty() ||
+                    isGraceDay(todayDate, currentGraceDay) ||
+                    hasUnfinishedCatchUp)
+        ) actualStreak else 0
     }
 
     BackHandler(enabled = readerContext != null) {
@@ -442,18 +523,11 @@ fun MainAppContainer(
 
         Box(modifier = Modifier.fillMaxSize()) {
             val toggleChapterCompletion = { key: String ->
-                // 1. Generate ALL valid keys for the current active cycle (not just today's visible ones)
-                val cycleKeys = cycleDates.flatMap { date ->
-                    getAssignedChapters(date, currentTrack, planStartDate).map { assignment ->
-                        val book = if (assignment.book.contains("Psalm", true)) "Psalms" else "Proverbs"
-                        val partSuffix = if (assignment.partId != null) "_part${assignment.partId}" else ""
-                        "${book}_${assignment.chapter}${partSuffix}_${assignment.assignedDate}"
-                    }
-                }.toSet()
-
-                // 2. Preserve ALL completed chapters within the cycle to prevent DataStore corruption
-                val currentValidChapters = rawCompletedChapters.intersect(cycleKeys)
-                val newValidChapters = if (currentValidChapters.contains(key)) currentValidChapters - key else currentValidChapters + key
+                val newValidChapters = if (rawCompletedChapters.contains(key)) {
+                    rawCompletedChapters - key
+                } else {
+                    rawCompletedChapters + key
+                }
 
                 // 3. Calculate if today's visible playlist is 100% complete
                 val activeDoneCount = newValidChapters.intersect(todayPlaylistKeys).size
@@ -648,6 +722,8 @@ fun MainAppContainer(
                                         p[planStartDateKey] = todayStr
                                         p[checkmarksDateKey] = cycleStartStr
                                         p[completedChaptersKey] = emptySet()
+                                        p[pendingCatchUpDatesKey] = emptySet()
+                                        p[pendingCatchUpDateKey] = todayStr
                                     }
                                 }
                             },
@@ -656,6 +732,9 @@ fun MainAppContainer(
                                     context.dataStore.edit { p ->
                                         p[graceDayKey] = newDay.name
                                         p[planStartDateKey] = todayStr
+                                        p[checkmarksDateKey] = getCycleStartDate(todayDate, newDay).toString()
+                                        p[pendingCatchUpDatesKey] = emptySet()
+                                        p[pendingCatchUpDateKey] = todayStr
                                     }
                                 }
                             },
