@@ -279,6 +279,27 @@ fun MainAppContainer(
             }
         }
 
+        // Also scan the active cycle through yesterday. This is necessary
+        // when a missed assignment is still inside the current cycle, because
+        // the weekly-cycle migration above will not run in that case.
+        val activeScanStart = if (cycleStartDate.isBefore(planStartDate)) planStartDate else cycleStartDate
+        if (!activeScanStart.isAfter(todayDate.minusDays(1))) {
+            generateSequence(activeScanStart) { date ->
+                if (date.isBefore(todayDate.minusDays(1))) date.plusDays(1) else null
+            }.toList()
+                .filterNot { isGraceDay(it, currentGraceDay) }
+                .forEach { date ->
+                    val assignments = getAssignedChapters(date, currentTrack, planStartDate)
+                    val hasIncompleteAssignment = assignments.any { assignment ->
+                        val book = if (assignment.book.contains("Psalm", true)) "Psalms" else "Proverbs"
+                        val partSuffix = if (assignment.partId != null) "_part${assignment.partId}" else ""
+                        val key = "${book}_${assignment.chapter}${partSuffix}_${assignment.assignedDate}"
+                        !storedCompleted.contains(key)
+                    }
+                    if (hasIncompleteAssignment) nextPendingDates += date.toString()
+                }
+        }
+
         context.dataStore.edit { p ->
             p[pendingCatchUpDatesKey] = nextPendingDates
             p[pendingCatchUpDateKey] = todayStr
