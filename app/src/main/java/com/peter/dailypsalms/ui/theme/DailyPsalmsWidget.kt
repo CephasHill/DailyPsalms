@@ -35,10 +35,11 @@ class DailyPsalmsWidget : GlanceAppWidget() {
             // Keys
             val readingTrackKey = stringPreferencesKey("reading_track")
             val graceDayKey = stringPreferencesKey("grace_day")
-            val checkmarksDateKey = stringPreferencesKey("checkmarks_date")
             val completedChaptersKey = stringSetPreferencesKey("completed_chapters")
             val planStartDateKey = stringPreferencesKey("plan_start_date")
+            val pendingCatchUpDatesKey = stringSetPreferencesKey("pending_catch_up_dates")
             val last100DateKey = stringPreferencesKey("last_100_date")
+            val legacyLast100DateKey = stringPreferencesKey("last_100Date_key")
             val streakKey = intPreferencesKey("streak")
 
             // Current date context
@@ -62,35 +63,69 @@ class DailyPsalmsWidget : GlanceAppWidget() {
             }
 
             val cycleStartDate = getCycleStartDate(todayDate, currentGraceDay)
-            val cycleStartStr = cycleStartDate.toString()
 
-            // Calculate completed items for the active cycle
-            val checkmarksDate = prefs[checkmarksDateKey] ?: ""
-            val rawCompleted = if (checkmarksDate == cycleStartStr) {
-                prefs[completedChaptersKey] ?: emptySet()
-            } else {
-                emptySet()
-            }
+            // Completion keys include their assignment date and are retained
+            // across cycles, just like the app's daily playlist.
+            val rawCompleted = prefs[completedChaptersKey] ?: emptySet()
+            val pendingCatchUpDates = prefs[pendingCatchUpDatesKey] ?: emptySet()
 
-            // Calculate today's chapters dynamically
-            val assignedToday = getAssignedChapters(todayDate, currentTrack, planStartDate)
-            val todayKeys = assignedToday.map { assignment ->
+            fun assignmentKey(assignment: AssignedChapter): String {
                 val book = if (assignment.book.contains("Psalm", true)) "Psalms" else "Proverbs"
                 val partSuffix = if (assignment.partId != null) "_part${assignment.partId}" else ""
-                "${book}_${assignment.chapter}${partSuffix}_${assignment.assignedDate}"
-            }.toSet()
+                return "${book}_${assignment.chapter}${partSuffix}_${assignment.assignedDate}"
+            }
 
-            val doneCount = rawCompleted.intersect(todayKeys).size
-            val totalCount = assignedToday.size
-            val isDoneToday = totalCount in 1..doneCount
+            val cycleDates = generateSequence(
+                if (cycleStartDate.isBefore(planStartDate)) planStartDate else cycleStartDate
+            ) { date ->
+                if (date.isBefore(todayDate)) date.plusDays(1) else null
+            }.toList()
+                .let { dates ->
+                    if (!isGraceDay(todayDate, currentGraceDay)) dates + todayDate else dates
+                }
+                .filterNot { isGraceDay(it, currentGraceDay) }
 
-            // Streak logic
-            val last100Date = prefs[last100DateKey] ?: ""
+            val allAssignmentDates = (pendingCatchUpDates.mapNotNull { dateString ->
+                try { LocalDate.parse(dateString) } catch (_: Exception) { null }
+            } + cycleDates).distinct().sorted()
+
+            val activeAssignments = allAssignmentDates.flatMap { date ->
+                getAssignedChapters(date, currentTrack, planStartDate).filter { assignment ->
+                    if (pendingCatchUpDates.contains(date.toString())) {
+                        true
+                    } else if (date.isBefore(todayDate)) {
+                        val key = assignmentKey(assignment)
+                        !rawCompleted.contains(key)
+                    } else {
+                        true
+                    }
+                }
+            }
+
+            val activeKeys = activeAssignments.map(::assignmentKey).toSet()
+            val doneCount = rawCompleted.intersect(activeKeys).size
+            val totalCount = activeAssignments.size
+            val isDoneToday = totalCount > 0 && doneCount == totalCount
+
+            // Keep widget streak behavior consistent with the app while a
+            // grace day or pending catch-up is still protecting the streak.
+            val hasUnfinishedCatchUp = activeAssignments.any { assignment ->
+                assignment.assignedDate.isBefore(todayDate) &&
+                        !rawCompleted.contains(assignmentKey(assignment))
+            }
+
+            val last100Date = prefs[last100DateKey] ?: prefs[legacyLast100DateKey] ?: ""
             val actualStreak = prefs[streakKey] ?: 0
             val displayStreak = when (last100Date) {
                 todayStr -> actualStreak
                 yesterdayStr -> actualStreak
-                else -> 0
+                "" -> actualStreak
+                else -> if (
+                    actualStreak > 0 &&
+                    (pendingCatchUpDates.isNotEmpty() ||
+                            isGraceDay(todayDate, currentGraceDay) ||
+                            hasUnfinishedCatchUp)
+                ) actualStreak else 0
             }
 
             val launchIntent = Intent(context, MainActivity::class.java).apply {
