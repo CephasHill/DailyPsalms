@@ -488,7 +488,7 @@ fun DailyDashboardScreen(
                             fontWeight = FontWeight.Bold
                         )
 
-                        if (reading.isCatchUp && !isDone) {
+                        if (reading.isCatchUp) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Surface(
                                 color = MaterialTheme.colorScheme.errorContainer,
