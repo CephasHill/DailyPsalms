@@ -75,12 +75,6 @@ class DailyPsalmsWidget : GlanceAppWidget() {
             val storedActiveCatchUpKeys = prefs[activeCatchUpKeysKey]
             val pendingSetReconciledToday = prefs[pendingCatchUpDateKey] == todayStr
 
-            fun assignmentKey(assignment: AssignedChapter): String {
-                val book = if (assignment.book.contains("Psalm", true)) "Psalms" else "Proverbs"
-                val partSuffix = if (assignment.partId != null) "_part${assignment.partId}" else ""
-                return "${book}_${assignment.chapter}${partSuffix}_${assignment.assignedDate}"
-            }
-
             fun hasIncompleteAssignment(date: LocalDate): Boolean {
                 return getAssignedChapters(date, currentTrack, planStartDate)
                     .any { assignment -> !rawCompleted.contains(assignmentKey(assignment)) }
@@ -107,15 +101,9 @@ class DailyPsalmsWidget : GlanceAppWidget() {
                 }.toSet()
             }
 
-            val cycleDates = generateSequence(
-                if (cycleStartDate.isBefore(planStartDate)) planStartDate else cycleStartDate
-            ) { date ->
-                if (date.isBefore(todayDate)) date.plusDays(1) else null
-            }.toList()
-                .let { dates ->
-                    if (!isGraceDay(todayDate, currentGraceDay)) dates + todayDate else dates
-                }
-                .filterNot { isGraceDay(it, currentGraceDay) }
+            // The Grace Day has its normal daily assignment and is also the
+            // final day for completing that week's catch-up chapters.
+            val cycleDates = getCycleDates(todayDate, currentGraceDay, planStartDate)
 
             // Reconstruct missed dates as well as reading the durable pending
             // set. This keeps the widget correct even if the app has not been
@@ -149,15 +137,6 @@ class DailyPsalmsWidget : GlanceAppWidget() {
                 else -> incompleteKeysForDates(pendingCatchUpDates)
             }
 
-            val previousCycleStart = getCycleStartDate(cycleStartDate.minusDays(1), currentGraceDay)
-            val previousScanStart = if (previousCycleStart.isBefore(planStartDate)) planStartDate else previousCycleStart
-            val previousCycleDates = if (previousScanStart.isAfter(cycleStartDate.minusDays(1))) {
-                emptyList()
-            } else {
-                generateSequence(previousScanStart) { date ->
-                    if (date.isBefore(cycleStartDate.minusDays(1))) date.plusDays(1) else null
-                }.toList().filterNot { isGraceDay(it, currentGraceDay) }
-            }
             val expiredPreviousCycle = storedPendingCatchUpDates.any { dateString ->
                 try {
                     val date = LocalDate.parse(dateString)
@@ -165,7 +144,8 @@ class DailyPsalmsWidget : GlanceAppWidget() {
                 } catch (_: Exception) {
                     true
                 }
-            } || previousCycleDates.any(::hasIncompleteAssignment)
+            } || getCycleDates(cycleStartDate.minusDays(1), currentGraceDay, planStartDate)
+                .any(::hasIncompleteAssignment)
 
             val allAssignmentDates = (pendingCatchUpDates.mapNotNull { dateString ->
                 try { LocalDate.parse(dateString) } catch (_: Exception) { null }

@@ -235,18 +235,11 @@ fun MainAppContainer(
         }
     }.toSet()
 
-    // Generate all scheduled dates in the active cycle through today. A Grace
-    // Day has no new assignment; it is reserved for unfinished assignments.
-    val cycleDates = remember(cycleStartDate, todayDate, planStartDate, currentGraceDay) {
-        val effectiveStart = if (cycleStartDate.isBefore(planStartDate)) planStartDate else cycleStartDate
-
-        generateSequence(effectiveStart) { d ->
-            if (d.isBefore(todayDate)) d.plusDays(1) else null
-        }.toList()
-            .let { dates ->
-                if (!isGraceDay(todayDate, currentGraceDay)) dates + todayDate else dates
-            }
-            .filterNot { isGraceDay(it, currentGraceDay) }
+    // Generate every scheduled date in the active cycle through today. The
+    // Grace Day still has its normal assignment; it is also the final day for
+    // completing that week's catch-up chapters.
+    val cycleDates = remember(todayDate, planStartDate, currentGraceDay) {
+        getCycleDates(todayDate, currentGraceDay, planStartDate)
     }
 
     val checkmarksDate = prefs[checkmarksDateKey] ?: ""
@@ -264,12 +257,6 @@ fun MainAppContainer(
         val storedActiveCatchUpKeys = prefs[activeCatchUpKeysKey]
         val storedCompleted = prefs[completedChaptersKey] ?: emptySet()
         val nextPendingDates = storedPendingDates.toMutableSet()
-
-        fun assignmentKey(assignment: AssignedChapter): String {
-            val book = if (assignment.book.contains("Psalm", true)) "Psalms" else "Proverbs"
-            val partSuffix = if (assignment.partId != null) "_part${assignment.partId}" else ""
-            return "${book}_${assignment.chapter}${partSuffix}_${assignment.assignedDate}"
-        }
 
         fun hasIncompleteAssignment(date: LocalDate): Boolean {
             return getAssignedChapters(date, currentTrack, planStartDate).any { assignment ->
@@ -315,9 +302,8 @@ fun MainAppContainer(
                 val previousScanStart = if (previousCycleStart.isBefore(planStartDate)) planStartDate else previousCycleStart
                 if (!previousScanStart.isAfter(cycleStartDate.minusDays(1))) {
                     expiredPreviousCycle = expiredPreviousCycle || generateSequence(previousScanStart) { date ->
-                        if (date.isBefore(cycleStartDate.minusDays(1))) date.plusDays(1) else null
+                        date.plusDays(1).takeIf { !it.isAfter(cycleStartDate.minusDays(1)) }
                     }.toList()
-                        .filterNot { isGraceDay(it, currentGraceDay) }
                         .any(::hasIncompleteAssignment)
                 }
             }
@@ -331,16 +317,11 @@ fun MainAppContainer(
 
         // Scan the active cycle through yesterday so missed chapters become
         // durable catch-ups even when no weekly boundary was crossed.
-        val activeScanStart = if (cycleStartDate.isBefore(planStartDate)) planStartDate else cycleStartDate
-        if (!activeScanStart.isAfter(todayDate.minusDays(1))) {
-            generateSequence(activeScanStart) { date ->
-                if (date.isBefore(todayDate.minusDays(1))) date.plusDays(1) else null
-            }.toList()
-                .filterNot { isGraceDay(it, currentGraceDay) }
-                .forEach { date ->
-                    if (hasIncompleteAssignment(date)) nextPendingDates += date.toString()
-                }
-        }
+        getCycleDates(todayDate, currentGraceDay, planStartDate)
+            .filter { it.isBefore(todayDate) }
+            .forEach { date ->
+                if (hasIncompleteAssignment(date)) nextPendingDates += date.toString()
+            }
 
         val nextActiveCatchUpKeys = when {
             storedPendingDate != todayStr || storedActiveCatchUpKeys == null ->
@@ -410,9 +391,7 @@ fun MainAppContainer(
             val fullCycleAssignments = allAssignmentDates.flatMap { date ->
                 getAssignedChapters(date, currentTrack, planStartDate).filter { assignment ->
                     if (date.isBefore(todayDate)) {
-                        val book = if (assignment.book.contains("Psalm", true)) "Psalms" else "Proverbs"
-                        val partSuffix = if (assignment.partId != null) "_part${assignment.partId}" else ""
-                        val key = "${book}_${assignment.chapter}${partSuffix}_${assignment.assignedDate}"
+                        val key = assignmentKey(assignment)
 
                         // Keep catch-up items checked today visible, but on
                         // the next date only carry the chapters still unread.
@@ -634,98 +613,92 @@ fun MainAppContainer(
                         p[intPreferencesKey("widget_done_count")] = activeDoneCount
                         p[intPreferencesKey("widget_total_count")] = todayPlaylist.size
 
+                        fun parseDate(value: String?): LocalDate? = value
+                            ?.takeIf { it.isNotEmpty() }
+                            ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+
                         val currentHistorical = p[historicalDatesKey] ?: emptySet()
+                        val currentState = StreakState(
+                            streak = p[streakKey] ?: 0,
+                            lastCompletedDate = parseDate(
+                                p[last100DateKey] ?: p[legacyLast100DateKey]
+                            ),
+                            historicalDates = currentHistorical.mapNotNull { parseDate(it) }.toSet(),
+                            recordStreak = p[recordStreakKey] ?: 0,
+                            streakResetDate = parseDate(p[streakResetDateKey])
+                        )
 
-                        if (isNow100 && !was100) {
-                            val last100 = p[last100DateKey] ?: p[legacyLast100DateKey] ?: ""
-                            val currentStreak = p[streakKey] ?: 0
+                        val undoSnapshot = parseDate(p[completionSnapshotDateKey])?.let { snapshotDate ->
+                            StreakUndoSnapshot(
+                                date = snapshotDate,
+                                streak = p[completionSnapshotStreakKey] ?: 0,
+                                lastCompletedDate = parseDate(p[completionSnapshotLast100DateKey]),
+                                historicalDates = (p[completionSnapshotHistoricalDatesKey] ?: emptySet())
+                                    .mapNotNull { parseDate(it) }
+                                    .toSet(),
+                                streakResetDate = parseDate(p[completionSnapshotStreakResetDateKey])
+                            )
+                        }
 
-                            // Save the exact pre-credit state. If the user
-                            // unchecks any chapter later today, this snapshot
-                            // restores the calendar and streak precisely.
-                            p[completionSnapshotDateKey] = todayStr
-                            p[completionSnapshotStreakKey] = currentStreak
-                            p[completionSnapshotLast100DateKey] = last100
-                            p[completionSnapshotHistoricalDatesKey] = currentHistorical
-                            p[completionSnapshotStreakResetDateKey] = p[streakResetDateKey] ?: ""
+                        val streakTransition = StreakEngine.apply(
+                            StreakTransitionInput(
+                                today = todayDate,
+                                cycleStartDate = cycleStartDate,
+                                cycleDates = cycleDates,
+                                wasComplete = was100,
+                                isComplete = isNow100,
+                                state = currentState,
+                                undoSnapshot = undoSnapshot
+                            )
+                        )
 
-                            val wasResetForCycle = p[streakResetDateKey] == cycleStartStr
-                            val isWithinCycle = if (wasResetForCycle) {
-                                false
+                        if (streakTransition.state != currentState) {
+                            val nextState = streakTransition.state
+                            p[streakKey] = nextState.streak
+                            p[historicalDatesKey] = nextState.historicalDates
+                                .map { it.toString() }
+                                .toSet()
+
+                            if (nextState.lastCompletedDate == null) {
+                                p.remove(last100DateKey)
                             } else {
-                                try {
-                                    if (last100.isNotEmpty()) {
-                                        val lastDate = LocalDate.parse(last100)
-                                        !lastDate.isBefore(cycleStartDate.minusDays(1))
-                                    } else {
-                                        currentStreak > 0
-                                    }
-                                } catch (_: Exception) { false }
+                                p[last100DateKey] = nextState.lastCompletedDate.toString()
                             }
 
-                            val gapDates = mutableSetOf<String>()
-                            val newStreak: Int
-
-                            if (wasResetForCycle) {
-                                // The old streak expired at the weekly
-                                // boundary. Credit only this cycle's dates,
-                                // including today (or the Grace Day itself).
-                                gapDates += cycleDates.map { it.toString() }
-                                gapDates += todayStr
-                                newStreak = gapDates.size.coerceAtLeast(1)
-                            } else if (last100.isNotEmpty() && isWithinCycle && last100 != todayStr) {
-                                val lastDate = try { LocalDate.parse(last100) } catch (_: Exception) { todayDate }
-                                var curr = lastDate.plusDays(1)
-                                while (!curr.isAfter(todayDate)) {
-                                    gapDates.add(curr.toString())
-                                    curr = curr.plusDays(1)
-                                }
-                                val daysToAdd = java.time.temporal.ChronoUnit.DAYS
-                                    .between(lastDate, todayDate)
-                                    .toInt()
-                                    .coerceAtLeast(1)
-                                newStreak = currentStreak + daysToAdd
+                            if (nextState.streakResetDate == null) {
+                                p.remove(streakResetDateKey)
                             } else {
-                                gapDates += todayStr
-                                newStreak = 1
+                                p[streakResetDateKey] = nextState.streakResetDate.toString()
                             }
 
-                            p[historicalDatesKey] = currentHistorical + gapDates
-                            p[streakKey] = newStreak
-                            p[last100DateKey] = todayStr
-                            p.remove(streakResetDateKey)
-
-                            val currentRecord = p[recordStreakKey] ?: 0
-                            if (newStreak > currentRecord) {
-                                p[recordStreakKey] = newStreak
+                            if (nextState.recordStreak != currentState.recordStreak) {
+                                p[recordStreakKey] = nextState.recordStreak
                             }
-                        } else if (!isNow100 && was100) {
-                            val last100 = p[last100DateKey] ?: p[legacyLast100DateKey] ?: ""
-                            if (p[completionSnapshotDateKey] == todayStr) {
-                                p[streakKey] = p[completionSnapshotStreakKey] ?: 0
-                                p[last100DateKey] = p[completionSnapshotLast100DateKey] ?: last100
-                                p[historicalDatesKey] = p[completionSnapshotHistoricalDatesKey] ?: currentHistorical
+                        }
 
-                                val snapshotResetDate = p[completionSnapshotStreakResetDateKey] ?: ""
-                                if (snapshotResetDate.isEmpty()) {
-                                    p.remove(streakResetDateKey)
-                                } else {
-                                    p[streakResetDateKey] = snapshotResetDate
-                                }
+                        when (streakTransition.snapshotAction) {
+                            CompletionSnapshotAction.SAVE -> {
+                                val snapshot = requireNotNull(streakTransition.snapshotToSave)
+                                p[completionSnapshotDateKey] = snapshot.date.toString()
+                                p[completionSnapshotStreakKey] = snapshot.streak
+                                p[completionSnapshotLast100DateKey] =
+                                    snapshot.lastCompletedDate?.toString() ?: ""
+                                p[completionSnapshotHistoricalDatesKey] = snapshot.historicalDates
+                                    .map { it.toString() }
+                                    .toSet()
+                                p[completionSnapshotStreakResetDateKey] =
+                                    snapshot.streakResetDate?.toString() ?: ""
+                            }
 
+                            CompletionSnapshotAction.CLEAR -> {
                                 p.remove(completionSnapshotDateKey)
                                 p.remove(completionSnapshotStreakKey)
                                 p.remove(completionSnapshotLast100DateKey)
                                 p.remove(completionSnapshotHistoricalDatesKey)
                                 p.remove(completionSnapshotStreakResetDateKey)
-                            } else if (last100 == todayStr) {
-                                // Compatibility fallback for a completion
-                                // created before snapshots were introduced.
-                                val currentStreak = p[streakKey] ?: 1
-                                p[streakKey] = maxOf(0, currentStreak - 1)
-                                p[last100DateKey] = yesterdayStr
-                                p[historicalDatesKey] = currentHistorical - todayStr
                             }
+
+                            CompletionSnapshotAction.KEEP -> Unit
                         }
                     }
                     DailyPsalmsWidget().updateAll(context)

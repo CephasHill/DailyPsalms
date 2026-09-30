@@ -101,7 +101,15 @@ data class DailyReading(
     val isCatchUp: Boolean,
     val partId: Int? = null
 ) {
-    val uniqueKey: String get() = "${chapterData.normalizedBook}_${chapterData.chapter}${if (partId != null) "_part$partId" else ""}_$assignedDate"
+    val uniqueKey: String
+        get() = assignmentKey(
+            AssignedChapter(
+                book = chapterData.normalizedBook,
+                chapter = chapterData.chapter,
+                assignedDate = assignedDate,
+                partId = partId
+            )
+        )
 }
 
 sealed class NavigationTab {
