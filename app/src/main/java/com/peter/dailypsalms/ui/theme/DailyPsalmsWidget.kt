@@ -40,6 +40,7 @@ class DailyPsalmsWidget : GlanceAppWidget() {
             val pendingCatchUpDatesKey = stringSetPreferencesKey("pending_catch_up_dates")
             val pendingCatchUpDateKey = stringPreferencesKey("pending_catch_up_date")
             val activeCatchUpKeysKey = stringSetPreferencesKey("active_catch_up_keys")
+            val checkmarksDateKey = stringPreferencesKey("checkmarks_date")
             val last100DateKey = stringPreferencesKey("last_100_date")
             val legacyLast100DateKey = stringPreferencesKey("last_100Date_key")
             val streakKey = intPreferencesKey("streak")
@@ -73,95 +74,46 @@ class DailyPsalmsWidget : GlanceAppWidget() {
             val rawCompleted = prefs[completedChaptersKey] ?: emptySet()
             val storedPendingCatchUpDates = prefs[pendingCatchUpDatesKey] ?: emptySet()
             val storedActiveCatchUpKeys = prefs[activeCatchUpKeysKey]
-            val pendingSetReconciledToday = prefs[pendingCatchUpDateKey] == todayStr
+            fun parseDate(value: String?): LocalDate? = value
+                ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
 
-            fun hasIncompleteAssignment(date: LocalDate): Boolean {
-                return getAssignedChapters(date, currentTrack, planStartDate)
-                    .any { assignment -> !rawCompleted.contains(assignmentKey(assignment)) }
-            }
-
-            fun incompleteKeysForDates(dates: Set<String>): Set<String> {
-                return dates.flatMap { dateString ->
-                    val date = try { LocalDate.parse(dateString) } catch (_: Exception) { null }
-                    if (date == null) {
-                        emptyList()
-                    } else {
-                        getAssignedChapters(date, currentTrack, planStartDate)
-                            .filter { assignment -> !rawCompleted.contains(assignmentKey(assignment)) }
-                            .map(::assignmentKey)
-                    }
-                }.toSet()
-            }
-
-            fun allKeysForDates(dates: Set<String>): Set<String> {
-                return dates.flatMap { dateString ->
-                    val date = try { LocalDate.parse(dateString) } catch (_: Exception) { null }
-                    if (date == null) emptyList()
-                    else getAssignedChapters(date, currentTrack, planStartDate).map(::assignmentKey)
-                }.toSet()
-            }
-
-            // The Grace Day has its normal daily assignment and is also the
-            // final day for completing that week's catch-up chapters.
-            val cycleDates = getCycleDates(todayDate, currentGraceDay, planStartDate)
-
-            // Reconstruct missed dates as well as reading the durable pending
-            // set. This keeps the widget correct even if the app has not been
-            // opened yet today to run its date-transition reconciliation.
-            val inferredPendingCatchUpDates = cycleDates
-                .filter { it.isBefore(todayDate) && hasIncompleteAssignment(it) }
-                .map { it.toString() }
+            val storedPendingDates = storedPendingCatchUpDates
+                .mapNotNull(::parseDate)
                 .toSet()
-            val storedCurrentPendingDates = storedPendingCatchUpDates
-                .filter { dateString ->
-                    try {
-                        !LocalDate.parse(dateString).isBefore(cycleStartDate)
-                    } catch (_: Exception) {
-                        false
-                    }
-                }
-                .toSet()
+            val containsInvalidPendingDate = storedPendingCatchUpDates.any { parseDate(it) == null }
 
-            val pendingCatchUpDates = (if (pendingSetReconciledToday) {
-                storedCurrentPendingDates
-            } else {
-                storedCurrentPendingDates.filter { dateString ->
-                    try { hasIncompleteAssignment(LocalDate.parse(dateString)) } catch (_: Exception) { false }
-                }.toSet()
-            }) + inferredPendingCatchUpDates
+            // Use the same reconciliation engine as MainActivity. This also
+            // reconstructs missed dates if the app has not been opened today,
+            // preserves checked catch-up for the current day, and expires
+            // unread previous-cycle work at the Grace Day boundary.
+            val reconciliation = CatchUpEngine.reconcile(
+                CatchUpReconciliationInput(
+                    today = todayDate,
+                    track = currentTrack,
+                    graceDay = currentGraceDay,
+                    planStartDate = planStartDate,
+                    storedPendingDates = storedPendingDates,
+                    lastReconciledDate = parseDate(prefs[pendingCatchUpDateKey]),
+                    storedActiveCatchUpKeys = storedActiveCatchUpKeys,
+                    cycleMarkerDate = parseDate(prefs[checkmarksDateKey]),
+                    completedKeys = rawCompleted,
+                    containsInvalidPendingDate = containsInvalidPendingDate
+                )
+            )
 
-            val visibleCatchUpKeys = when {
-                pendingSetReconciledToday && storedActiveCatchUpKeys != null ->
-                    storedActiveCatchUpKeys + incompleteKeysForDates(inferredPendingCatchUpDates)
-                pendingSetReconciledToday -> allKeysForDates(pendingCatchUpDates)
-                else -> incompleteKeysForDates(pendingCatchUpDates)
-            }
+            val dailyPlan = ReadingEngine.buildDailyPlan(
+                DailyPlanInput(
+                    today = todayDate,
+                    track = currentTrack,
+                    graceDay = currentGraceDay,
+                    planStartDate = planStartDate,
+                    pendingCatchUpDates = reconciliation.pendingDates,
+                    activeCatchUpKeys = reconciliation.activeCatchUpKeys,
+                    completedKeys = rawCompleted
+                )
+            )
 
-            val expiredPreviousCycle = storedPendingCatchUpDates.any { dateString ->
-                try {
-                    val date = LocalDate.parse(dateString)
-                    date.isBefore(cycleStartDate) && hasIncompleteAssignment(date)
-                } catch (_: Exception) {
-                    true
-                }
-            } || getCycleDates(cycleStartDate.minusDays(1), currentGraceDay, planStartDate)
-                .any(::hasIncompleteAssignment)
-
-            val allAssignmentDates = (pendingCatchUpDates.mapNotNull { dateString ->
-                try { LocalDate.parse(dateString) } catch (_: Exception) { null }
-            } + cycleDates).distinct().sorted()
-
-            val activeAssignments = allAssignmentDates.flatMap { date ->
-                getAssignedChapters(date, currentTrack, planStartDate).filter { assignment ->
-                    if (date.isBefore(todayDate)) {
-                        val key = assignmentKey(assignment)
-                        (pendingCatchUpDates.contains(date.toString()) && visibleCatchUpKeys.contains(key)) ||
-                                !rawCompleted.contains(key)
-                    } else {
-                        true
-                    }
-                }
-            }
+            val activeAssignments = dailyPlan.assignments
 
             val activeKeys = activeAssignments.map(::assignmentKey).toSet()
             val doneCount = rawCompleted.intersect(activeKeys).size
@@ -178,7 +130,7 @@ class DailyPsalmsWidget : GlanceAppWidget() {
             val last100Date = prefs[last100DateKey] ?: prefs[legacyLast100DateKey] ?: ""
             val actualStreak = prefs[streakKey] ?: 0
             val streakWasReset = prefs[streakResetDateKey] == cycleStartStr
-            val displayStreak = if (expiredPreviousCycle || streakWasReset) {
+            val displayStreak = if (reconciliation.expiredPreviousCycle || streakWasReset) {
                 0
             } else {
                 when (last100Date) {
@@ -187,7 +139,7 @@ class DailyPsalmsWidget : GlanceAppWidget() {
                     "" -> actualStreak
                     else -> if (
                         actualStreak > 0 &&
-                        (pendingCatchUpDates.isNotEmpty() ||
+                        (reconciliation.pendingDates.isNotEmpty() ||
                                 isGraceDay(todayDate, currentGraceDay) ||
                                 hasUnfinishedCatchUp)
                     ) actualStreak else 0
