@@ -90,7 +90,13 @@ object StreakEngine {
         val newStreak: Int
         val lastDate = stateBeforeCredit.lastCompletedDate
 
-        if (wasResetForCycle) {
+        if (lastDate == input.today) {
+            // A plan/track reset can make a new playlist appear incomplete on
+            // a day that was already credited. Completing that new playlist
+            // must not replace the existing streak with 1.
+            gapDates = emptySet()
+            newStreak = stateBeforeCredit.streak.coerceAtLeast(1)
+        } else if (wasResetForCycle) {
             // A previous cycle expired. Start again from this cycle's dates,
             // including today's normal reading (including on Grace Day).
             gapDates = (input.cycleDates + input.today).toSet()

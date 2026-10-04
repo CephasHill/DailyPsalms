@@ -41,6 +41,7 @@ class DailyPsalmsWidget : GlanceAppWidget() {
             val pendingCatchUpDateKey = stringPreferencesKey("pending_catch_up_date")
             val activeCatchUpKeysKey = stringSetPreferencesKey("active_catch_up_keys")
             val checkmarksDateKey = stringPreferencesKey("checkmarks_date")
+            val historicalDatesKey = stringSetPreferencesKey("historical_dates")
             val last100DateKey = stringPreferencesKey("last_100_date")
             val legacyLast100DateKey = stringPreferencesKey("last_100Date_key")
             val streakKey = intPreferencesKey("streak")
@@ -60,18 +61,24 @@ class DailyPsalmsWidget : GlanceAppWidget() {
                 GraceDayOption.valueOf(prefs[graceDayKey] ?: GraceDayOption.NONE.name)
             } catch (_: Exception) { GraceDayOption.NONE }
 
-            val planStartDate = try {
-                prefs[planStartDateKey]?.let { LocalDate.parse(it) } ?: todayDate
-            } catch (_: Exception) {
-                todayDate
-            }
-
             val cycleStartDate = getCycleStartDate(todayDate, currentGraceDay)
             val cycleStartStr = cycleStartDate.toString()
 
             // Completion keys include their assignment date and are retained
             // across cycles, just like the app's daily playlist.
             val rawCompleted = prefs[completedChaptersKey] ?: emptySet()
+            val lastCompletedDate = prefs[last100DateKey]
+                ?: prefs[legacyLast100DateKey]
+            val planStartDate = inferPlanStartDate(
+                today = todayDate,
+                graceDay = currentGraceDay,
+                storedPlanStartDate = prefs[planStartDateKey],
+                cycleMarkerDate = prefs[checkmarksDateKey],
+                lastCompletedDate = lastCompletedDate,
+                legacyLastCompletedDate = null,
+                historicalDates = prefs[historicalDatesKey] ?: emptySet(),
+                completedKeys = rawCompleted
+            )
             val storedPendingCatchUpDates = prefs[pendingCatchUpDatesKey] ?: emptySet()
             val storedActiveCatchUpKeys = prefs[activeCatchUpKeysKey]
             fun parseDate(value: String?): LocalDate? = value
@@ -127,7 +134,7 @@ class DailyPsalmsWidget : GlanceAppWidget() {
                         !rawCompleted.contains(assignmentKey(assignment))
             }
 
-            val last100Date = prefs[last100DateKey] ?: prefs[legacyLast100DateKey] ?: ""
+            val last100Date = lastCompletedDate ?: ""
             val actualStreak = prefs[streakKey] ?: 0
             val streakWasReset = prefs[streakResetDateKey] == cycleStartStr
             val displayStreak = if (reconciliation.expiredPreviousCycle || streakWasReset) {

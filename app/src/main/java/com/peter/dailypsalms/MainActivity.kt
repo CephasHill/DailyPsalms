@@ -180,7 +180,7 @@ fun MainAppContainer(
 
     // DEFAULT BIBLE VERSION
     val preferredVersionCode = prefs[bibleVersionKey] ?: BibleVersion.BSB.code
-    val safeVersionCode = if (isAssetExists(context, "psalms_$preferredVersionCode.json")) {
+    val safeVersionCode = if (areTranslationAssetsAvailable(context, preferredVersionCode)) {
         preferredVersionCode
     } else {
         BibleVersion.BSB.code
@@ -208,17 +208,31 @@ fun MainAppContainer(
     }
     val cycleStartStr = cycleStartDate.toString()
 
+    val checkmarksDate = prefs[checkmarksDateKey] ?: ""
+    val rawCompletedChapters = prefs[completedChaptersKey] ?: emptySet()
     val planStartStr = prefs[planStartDateKey]
-    val planStartDate = remember(planStartStr, todayDate) {
-        try {
-            planStartStr?.let { LocalDate.parse(it) } ?: todayDate
-        } catch (_: Exception) { todayDate }
-    }
+    val planStartDate = inferPlanStartDate(
+        today = todayDate,
+        graceDay = currentGraceDay,
+        storedPlanStartDate = planStartStr,
+        cycleMarkerDate = checkmarksDate,
+        lastCompletedDate = prefs[last100DateKey],
+        legacyLastCompletedDate = prefs[legacyLast100DateKey],
+        historicalDates = historicalDates,
+        completedKeys = rawCompletedChapters
+    )
 
-    // Save the anchor date immediately for existing testers upgrading
-    LaunchedEffect(planStartStr) {
-        if (planStartStr == null) {
-            context.dataStore.edit { p -> p[planStartDateKey] = todayStr }
+    // 1.1.9 did not reliably persist the plan anchor for every user. Persist
+    // the reconstructed value only when the stored value is missing/invalid;
+    // the composable already uses the reconstructed value during this first
+    // composition, so catch-up recovery does not wait for this write.
+    LaunchedEffect(planStartStr, planStartDate) {
+        if (parseLocalDate(planStartStr) == null) {
+            context.dataStore.edit { p ->
+                if (parseLocalDate(p[planStartDateKey]) == null) {
+                    p[planStartDateKey] = planStartDate.toString()
+                }
+            }
         }
     }
 
@@ -242,11 +256,17 @@ fun MainAppContainer(
         getCycleDates(todayDate, currentGraceDay, planStartDate)
     }
 
-    val checkmarksDate = prefs[checkmarksDateKey] ?: ""
+    // A track change starts a new plan today. Do not let streak credit infer
+    // missed days before that new plan began.
+    val streakCycleStartDate = if (planStartDate.isAfter(cycleStartDate)) {
+        planStartDate
+    } else {
+        cycleStartDate
+    }
+
     // Completion keys include their assignment date, so they can safely be
     // retained across weekly cycle boundaries. This is also what lets us
     // recognize a catch-up chapter from the previous cycle as completed.
-    val rawCompletedChapters = prefs[completedChaptersKey] ?: emptySet()
 
     // Reconcile catch-ups at every date transition. Unfinished assignments
     // stay available through the selected Grace Day, but expire at the start
@@ -531,61 +551,65 @@ fun MainAppContainer(
 
         Box(modifier = Modifier.fillMaxSize()) {
             val toggleChapterCompletion = { key: String ->
-                val newValidChapters = if (rawCompletedChapters.contains(key)) {
-                    rawCompletedChapters - key
-                } else {
-                    rawCompletedChapters + key
-                }
-
-                // Calculate if the full visible playlist is complete. Catch-up
-                // chapters count toward today's completion requirement.
-                val activeDoneCount = newValidChapters.intersect(todayPlaylistKeys).size
-                val isNow100 = activeDoneCount == todayPlaylist.size
-                val was100 = rawCompletedChapters.intersect(todayPlaylistKeys).size == todayPlaylist.size
-
-                if (isNow100 && !was100) {
-                    showExplosion = true
-                }
-
                 coroutineScope.launch {
+                    var shouldShowCompletionAnimation = false
+
                     context.dataStore.edit { p ->
+                        // Read the latest set inside DataStore's serialized
+                        // transaction. Two rapid taps must build on each
+                        // other's result instead of both reading the same
+                        // Compose snapshot and overwriting one completion.
+                        val currentCompletedChapters = p[completedChaptersKey] ?: emptySet()
+                        val newCompletedChapters = if (currentCompletedChapters.contains(key)) {
+                            currentCompletedChapters - key
+                        } else {
+                            currentCompletedChapters + key
+                        }
+
+                        // Catch-up chapters count toward today's completion
+                        // requirement.
+                        val activeDoneCount = newCompletedChapters
+                            .intersect(todayPlaylistKeys)
+                            .size
+                        val isNow100 = todayPlaylist.isNotEmpty() &&
+                                activeDoneCount == todayPlaylist.size
+                        val was100 = todayPlaylist.isNotEmpty() &&
+                                currentCompletedChapters.intersect(todayPlaylistKeys).size == todayPlaylist.size
+                        shouldShowCompletionAnimation = isNow100 && !was100
+
                         p[checkmarksDateKey] = cycleStartStr
-                        p[completedChaptersKey] = newValidChapters
+                        p[completedChaptersKey] = newCompletedChapters
 
                         p[intPreferencesKey("widget_done_count")] = activeDoneCount
                         p[intPreferencesKey("widget_total_count")] = todayPlaylist.size
 
-                        fun parseDate(value: String?): LocalDate? = value
-                            ?.takeIf { it.isNotEmpty() }
-                            ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-
                         val currentHistorical = p[historicalDatesKey] ?: emptySet()
                         val currentState = StreakState(
                             streak = p[streakKey] ?: 0,
-                            lastCompletedDate = parseDate(
+                            lastCompletedDate = parseLocalDate(
                                 p[last100DateKey] ?: p[legacyLast100DateKey]
                             ),
-                            historicalDates = currentHistorical.mapNotNull { parseDate(it) }.toSet(),
+                            historicalDates = currentHistorical.mapNotNull(::parseLocalDate).toSet(),
                             recordStreak = p[recordStreakKey] ?: 0,
-                            streakResetDate = parseDate(p[streakResetDateKey])
+                            streakResetDate = parseLocalDate(p[streakResetDateKey])
                         )
 
-                        val undoSnapshot = parseDate(p[completionSnapshotDateKey])?.let { snapshotDate ->
+                        val undoSnapshot = parseLocalDate(p[completionSnapshotDateKey])?.let { snapshotDate ->
                             StreakUndoSnapshot(
                                 date = snapshotDate,
                                 streak = p[completionSnapshotStreakKey] ?: 0,
-                                lastCompletedDate = parseDate(p[completionSnapshotLast100DateKey]),
+                                lastCompletedDate = parseLocalDate(p[completionSnapshotLast100DateKey]),
                                 historicalDates = (p[completionSnapshotHistoricalDatesKey] ?: emptySet())
-                                    .mapNotNull { parseDate(it) }
+                                    .mapNotNull(::parseLocalDate)
                                     .toSet(),
-                                streakResetDate = parseDate(p[completionSnapshotStreakResetDateKey])
+                                streakResetDate = parseLocalDate(p[completionSnapshotStreakResetDateKey])
                             )
                         }
 
                         val streakTransition = StreakEngine.apply(
                             StreakTransitionInput(
                                 today = todayDate,
-                                cycleStartDate = cycleStartDate,
+                                cycleStartDate = streakCycleStartDate,
                                 cycleDates = cycleDates,
                                 wasComplete = was100,
                                 isComplete = isNow100,
@@ -603,8 +627,10 @@ fun MainAppContainer(
 
                             if (nextState.lastCompletedDate == null) {
                                 p.remove(last100DateKey)
+                                p.remove(legacyLast100DateKey)
                             } else {
                                 p[last100DateKey] = nextState.lastCompletedDate.toString()
+                                p.remove(legacyLast100DateKey)
                             }
 
                             if (nextState.streakResetDate == null) {
@@ -642,6 +668,10 @@ fun MainAppContainer(
 
                             CompletionSnapshotAction.KEEP -> Unit
                         }
+                    }
+
+                    if (shouldShowCompletionAnimation) {
+                        showExplosion = true
                     }
                     DailyPsalmsWidget().updateAll(context)
                 }
@@ -722,6 +752,7 @@ fun MainAppContainer(
                 when (selectedTab) {
                     is NavigationTab.Daily -> {
                         DailyDashboardScreen(
+                            today = todayDate,
                             playlist = todayPlaylist,
                             completedChapters = completedChapters,
                             streakCount = displayStreak,
@@ -781,7 +812,10 @@ fun MainAppContainer(
                                 coroutineScope.launch {
                                     context.dataStore.edit { p ->
                                         p[graceDayKey] = newDay.name
-                                        p[planStartDateKey] = todayStr
+                                        // Grace Day changes the catch-up
+                                        // deadline, not the reading-plan
+                                        // phase. Preserve plan_start_date so
+                                        // paced tracks do not silently restart.
                                         p[checkmarksDateKey] = getCycleStartDate(todayDate, newDay).toString()
                                         p[pendingCatchUpDatesKey] = emptySet()
                                         p[pendingCatchUpDateKey] = todayStr

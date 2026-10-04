@@ -307,7 +307,7 @@ fun AboutScreen(
             },
             text = {
                 Text(
-                    "Changing your Grace Day will clear any incomplete catch-up chapters you currently have, starting you fresh from today. \n\nDon't worry—your streak and reading history will not be affected!"
+                    "Changing your Grace Day will clear the incomplete catch-up chapters currently shown and change your weekly deadline. Your reading track, streak, and reading history will not be affected."
                 )
             },
             confirmButton = {
@@ -384,6 +384,7 @@ fun AboutScreen(
 
 @Composable
 fun DailyDashboardScreen(
+    today: LocalDate,
     playlist: List<DailyReading>,
     completedChapters: Set<String>,
     streakCount: Int,
@@ -400,6 +401,7 @@ fun DailyDashboardScreen(
 
     if (showCalendar) {
         ProgressCalendarDialog(
+            today = today,
             historicalDates = historicalDates,
             currentStreak = streakCount,
             recordStreak = recordStreak,
@@ -444,9 +446,7 @@ fun DailyDashboardScreen(
         }
 
         item {
-            val formattedDate = remember {
-                LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM d"))
-            }
+            val formattedDate = today.format(DateTimeFormatter.ofPattern("MMMM d"))
 
             Text(
                 text = "Assigned Readings for $formattedDate",
@@ -516,13 +516,13 @@ fun DailyDashboardScreen(
 
 @Composable
 fun ProgressCalendarDialog(
+    today: LocalDate,
     historicalDates: Set<String>,
     currentStreak: Int,
     recordStreak: Int,
     onDismiss: () -> Unit
 ) {
-    var currentMonth by remember { mutableStateOf(LocalDate.now().withDayOfMonth(1)) }
-    val today = remember { LocalDate.now() }
+    var currentMonth by remember { mutableStateOf(today.withDayOfMonth(1)) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -766,7 +766,6 @@ fun ActiveChapterReaderScreen(
 ) {
     val context = LocalContext.current
     var selectedFootnote by remember { mutableStateOf<Footnote?>(null) }
-    var formatMenuExpanded by remember { mutableStateOf(false) }
     var versionMenuExpanded by remember { mutableStateOf(false) }
     var settingsMenuExpanded by remember { mutableStateOf(false) }
 
@@ -839,7 +838,7 @@ fun ActiveChapterReaderScreen(
                             ) {
                                 val availableVersions = remember {
                                     BibleVersion.entries.filter { version ->
-                                        isAssetExists(context, "psalms_${version.code}.json")
+                                        areTranslationAssetsAvailable(context, version.code)
                                     }
                                 }
 
@@ -966,7 +965,7 @@ fun ActiveChapterReaderScreen(
                                         },
                                         onClick = {
                                             onFootnoteColorsChange(!showFootnoteColors)
-                                            formatMenuExpanded = false
+                                            settingsMenuExpanded = false
                                         }
                                     )
                                 }
@@ -1212,7 +1211,7 @@ fun OnboardingScreen(onFinish: (ReadingTrack, GraceDayOption, BibleVersion) -> U
                     0 -> OnboardingPage(
                         iconPainter = painterResource(id = R.drawable.ic_kinnor),
                         title = "Welcome to Daily Psalms",
-                        description = "Your distraction-free companion for reading through the books of Psalms and Proverbs every single month."
+                        description = "Your distraction-free companion for making Psalms and Proverbs a daily habit."
                     )
                     1 -> OnboardingPage(
                         iconPainter = androidx.compose.ui.graphics.vector.rememberVectorPainter(image = Icons.Default.Today),

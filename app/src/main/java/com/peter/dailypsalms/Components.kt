@@ -67,7 +67,7 @@ fun TranslationsInfoSection(context: Context) {
     val isDark = isSystemInDarkTheme()
     val availableVersions = remember {
         BibleVersion.entries.filter { version ->
-            isAssetExists(context, "psalms_${version.code}.json")
+            areTranslationAssetsAvailable(context, version.code)
         }
     }
 

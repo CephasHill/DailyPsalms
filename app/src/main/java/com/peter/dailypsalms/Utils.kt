@@ -13,6 +13,55 @@ fun isAssetExists(context: Context, fileName: String): Boolean {
     }
 }
 
+fun areTranslationAssetsAvailable(context: Context, versionCode: String): Boolean {
+    return isAssetExists(context, "psalms_$versionCode.json") &&
+            isAssetExists(context, "proverbs_$versionCode.json")
+}
+
+fun parseLocalDate(value: String?): LocalDate? {
+    return value?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+}
+
+/**
+ * Returns the persisted plan anchor, or reconstructs a best-effort anchor for
+ * users upgrading from a version that did not persist plan_start_date.
+ *
+ * The current cycle is the important fallback: it lets the catch-up engine
+ * rediscover missed assignments instead of silently starting at today.
+ */
+fun inferPlanStartDate(
+    today: LocalDate,
+    graceDay: GraceDayOption,
+    storedPlanStartDate: String?,
+    cycleMarkerDate: String?,
+    lastCompletedDate: String?,
+    legacyLastCompletedDate: String?,
+    historicalDates: Set<String>,
+    completedKeys: Set<String>
+): LocalDate {
+    parseLocalDate(storedPlanStartDate)
+        ?.takeIf { !it.isAfter(today) }
+        ?.let { return it }
+
+    val completedAssignmentDates = completedKeys.mapNotNull { key ->
+        parseLocalDate(key.substringAfterLast('_'))
+    }
+
+    val candidates = historicalDates.mapNotNull(::parseLocalDate) +
+            listOfNotNull(
+                parseLocalDate(lastCompletedDate),
+                parseLocalDate(legacyLastCompletedDate),
+                parseLocalDate(cycleMarkerDate)
+            ) +
+            completedAssignmentDates +
+            getCycleStartDate(today, graceDay)
+
+    return candidates
+        .filterNot { it.isAfter(today) }
+        .minOrNull()
+        ?: today
+}
+
 fun getCycleStartDate(today: LocalDate, graceDay: GraceDayOption): LocalDate {
     if (graceDay == GraceDayOption.NONE) return today
 

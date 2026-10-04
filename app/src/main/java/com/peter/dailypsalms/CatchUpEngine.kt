@@ -51,6 +51,11 @@ object CatchUpEngine {
                     .map(::assignmentKey)
             }.toSet()
 
+        fun allKeysForDates(dates: Set<LocalDate>): Set<String> =
+            dates.flatMap { date ->
+                assignmentsFor(date).map(::assignmentKey)
+            }.toSet()
+
         var expiredPreviousCycle = input.containsInvalidPendingDate ||
                 input.storedPendingDates.any { date ->
                     date.isBefore(cycleStartDate) && hasIncompleteAssignment(date)
@@ -105,13 +110,22 @@ object CatchUpEngine {
                 }
             }
 
-        val activeCatchUpKeys = if (
+        val activeCatchUpKeys = when {
+            // Legacy versions did not persist pending dates. On the first
+            // 1.1.10 reconciliation, retain the whole current-cycle catch-up
+            // playlist for today so an already-checked catch-up is not
+            // unexpectedly removed during the upgrade. The normal next-day
+            // reconciliation below will reduce it to unread keys.
+            input.lastReconciledDate == null &&
+                    input.cycleMarkerDate != null &&
+                    input.storedPendingDates.isEmpty() ->
+                allKeysForDates(nextPendingDates)
+
             input.lastReconciledDate != input.today ||
-            input.storedActiveCatchUpKeys == null
-        ) {
-            incompleteKeysForDates(nextPendingDates)
-        } else {
-            input.storedActiveCatchUpKeys
+                    input.storedActiveCatchUpKeys == null ->
+                incompleteKeysForDates(nextPendingDates)
+
+            else -> input.storedActiveCatchUpKeys
         }
 
         return CatchUpReconciliationResult(
