@@ -2,10 +2,10 @@ package com.peter.dailypsalms.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+val BluePrimaryLight = Color(0xFF11446B)
+val BlueSecondaryLight = Color(0xFF47535E)
+val BlueTertiaryLight = Color(0xFF19649D)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val BluePrimaryDark = Color(0xFF88BBE4)
+val BlueSecondaryDark = Color(0xFFB0BCC7)
+val BlueTertiaryDark = Color(0xFF589BCE)
