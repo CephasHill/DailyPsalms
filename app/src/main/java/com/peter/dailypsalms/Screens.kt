@@ -87,7 +87,8 @@ fun AboutScreen(
     onTrackChange: (ReadingTrack) -> Unit,
     onGraceDayChange: (GraceDayOption) -> Unit,
     onReplayTutorial: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    developmentTools: (@Composable () -> Unit)? = null
 ) {
     val context = LocalContext.current
     var showCreditsDialog by remember { mutableStateOf(false) }
@@ -237,6 +238,8 @@ fun AboutScreen(
                         modifier = Modifier.padding(bottom = 8.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
                     )
+
+                    developmentTools?.invoke()
 
                     // App Tour & Credits
                     TextButton(

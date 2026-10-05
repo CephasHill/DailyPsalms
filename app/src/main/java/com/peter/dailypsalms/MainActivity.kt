@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,14 +42,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import androidx.glance.appwidget.updateAll
 import com.peter.dailypsalms.ui.theme.DailyPsalmsTheme
-import com.peter.dailypsalms.ui.theme.DailyPsalmsWidget
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -57,6 +57,10 @@ import java.time.LocalDate
 import kotlin.time.Duration.Companion.minutes
 
 val Context.dataStore by preferencesDataStore(name = "settings")
+
+// ScenarioTools provides an isolated store in debug builds. Direct previews
+// and tests can still fall back to the normal settings store.
+val LocalProgressDataStore = staticCompositionLocalOf<DataStore<Preferences>?> { null }
 
 class MainActivity : ComponentActivity() {
 
@@ -82,44 +86,48 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             DailyPsalmsTheme {
-                val context = LocalContext.current
-                val prefs by context.dataStore.data.collectAsState(initial = null)
-                val coroutineScope = rememberCoroutineScope()
+                ScenarioTools.Host {
+                    val context = LocalContext.current
+                    val progressStore = LocalProgressDataStore.current ?: context.dataStore
+                    val prefs by progressStore.data.collectAsState(initial = null)
+                    val coroutineScope = rememberCoroutineScope()
 
-                if (prefs != null) {
-                    val hasSeenOnboardingKey = booleanPreferencesKey("has_seen_onboarding")
-                    val hasSeen = prefs!![hasSeenOnboardingKey] ?: false
+                    if (prefs != null) {
+                        val hasSeenOnboardingKey = booleanPreferencesKey("has_seen_onboarding")
+                        val hasSeen = prefs!![hasSeenOnboardingKey] ?: false
 
-                    if (hasSeen) {
-                        // 4. Pass the widget action and a reset callback down to the container
-                        MainAppContainer(
-                            openReadNow = widgetAction,
-                            onReadNowConsumed = { widgetAction = false }
-                        )
-                    } else {
-                        OnboardingScreen(
-                            onFinish = { selectedTrack, selectedGraceDay, selectedVersion ->
-                                coroutineScope.launch {
-                                    context.dataStore.edit { p ->
-                                        p[hasSeenOnboardingKey] = true
+                        if (hasSeen) {
+                            // 4. Pass the widget action and a reset callback down to the container
+                            MainAppContainer(
+                                openReadNow = widgetAction,
+                                onReadNowConsumed = { widgetAction = false }
+                            )
+                        } else {
+                            OnboardingScreen(
+                                onFinish = { selectedTrack, selectedGraceDay, selectedVersion ->
+                                    coroutineScope.launch {
+                                        progressStore.edit { p ->
+                                            p[hasSeenOnboardingKey] = true
 
-                                        val readingTrackKey = stringPreferencesKey("reading_track")
-                                        val graceDayKey = stringPreferencesKey("grace_day")
-                                        val bibleVersionKey = stringPreferencesKey("bible_version")
+                                            val readingTrackKey = stringPreferencesKey("reading_track")
+                                            val graceDayKey = stringPreferencesKey("grace_day")
+                                            val bibleVersionKey = stringPreferencesKey("bible_version")
 
-                                        p[readingTrackKey] = selectedTrack.name
-                                        p[graceDayKey] = selectedGraceDay.name
-                                        p[bibleVersionKey] = selectedVersion.code
-                                        p[stringPreferencesKey("plan_start_date")] = LocalDate.now().toString()
+                                            p[readingTrackKey] = selectedTrack.name
+                                            p[graceDayKey] = selectedGraceDay.name
+                                            p[bibleVersionKey] = selectedVersion.code
+                                            p[stringPreferencesKey("plan_start_date")] =
+                                                (ScenarioTools.dateOverride(p) ?: LocalDate.now()).toString()
+                                        }
                                     }
                                 }
-                            }
-                        )
-                    }
-                } else {
-                    // Show a simple loading state while checking preferences
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                            )
+                        }
+                    } else {
+                        // Show a simple loading state while checking preferences
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
                     }
                 }
             }
@@ -133,9 +141,16 @@ fun MainAppContainer(
     onReadNowConsumed: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val progressStore = LocalProgressDataStore.current ?: context.dataStore
     val coroutineScope = rememberCoroutineScope()
 
-    val prefs by context.dataStore.data.collectAsState(initial = emptyPreferences())
+    val loadedPrefs by progressStore.data.collectAsState(initial = null)
+    val prefs = loadedPrefs ?: run {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
 
     // DataStore Keys
     val checkmarksDateKey = stringPreferencesKey("checkmarks_date")
@@ -199,7 +214,7 @@ fun MainAppContainer(
     var readerContext by remember { mutableStateOf<ReaderContext?>(null) }
 
     val todayDateState = remember { mutableStateOf(LocalDate.now()) }
-    val todayDate by todayDateState
+    val todayDate = ScenarioTools.dateOverride(prefs) ?: todayDateState.value
     val todayStr = todayDate.toString()
     val yesterdayStr = todayDate.minusDays(1).toString()
 
@@ -228,7 +243,8 @@ fun MainAppContainer(
     // composition, so catch-up recovery does not wait for this write.
     LaunchedEffect(planStartStr, planStartDate) {
         if (parseLocalDate(planStartStr) == null) {
-            context.dataStore.edit { p ->
+            progressStore.edit { p ->
+                if (!ScenarioTools.isCurrentSnapshot(prefs, p)) return@edit
                 if (parseLocalDate(p[planStartDateKey]) == null) {
                     p[planStartDateKey] = planStartDate.toString()
                 }
@@ -297,7 +313,8 @@ fun MainAppContainer(
             )
         )
 
-        context.dataStore.edit { p ->
+        progressStore.edit { p ->
+            if (!ScenarioTools.isCurrentSnapshot(prefs, p)) return@edit
             p[pendingCatchUpDatesKey] = reconciliation.pendingDates
                 .map { it.toString() }
                 .toSet()
@@ -413,11 +430,12 @@ fun MainAppContainer(
                 }
 
                 val activeDoneCount = rawCompletedChapters.intersect(generatedPlaylist.map { it.uniqueKey }.toSet()).size
-                context.dataStore.edit { p ->
+                progressStore.edit { p ->
+                    if (!ScenarioTools.isCurrentSnapshot(prefs, p)) return@edit
                     p[intPreferencesKey("widget_done_count")] = activeDoneCount
                     p[intPreferencesKey("widget_total_count")] = generatedPlaylist.size
                 }
-                DailyPsalmsWidget().updateAll(context)
+                ScenarioTools.updateWidgets(context, prefs)
 
                 isLoading = false
             }
@@ -450,13 +468,13 @@ fun MainAppContainer(
             val liveToday = LocalDate.now()
             if (liveToday != todayDateState.value) {
                 todayDateState.value = liveToday
-                DailyPsalmsWidget().updateAll(context)
+                ScenarioTools.updateWidgets(context, prefs)
             }
         }
     }
 
     LaunchedEffect(Unit) {
-        DailyPsalmsWidget().updateAll(context)
+        ScenarioTools.updateWidgets(context, prefs)
     }
 
     val currentFootnoteStyle = try {
@@ -554,7 +572,8 @@ fun MainAppContainer(
                 coroutineScope.launch {
                     var shouldShowCompletionAnimation = false
 
-                    context.dataStore.edit { p ->
+                    progressStore.edit { p ->
+                        if (!ScenarioTools.isCurrentSnapshot(prefs, p)) return@edit
                         // Read the latest set inside DataStore's serialized
                         // transaction. Two rapid taps must build on each
                         // other's result instead of both reading the same
@@ -673,33 +692,59 @@ fun MainAppContainer(
                     if (shouldShowCompletionAnimation) {
                         showExplosion = true
                     }
-                    DailyPsalmsWidget().updateAll(context)
+                    ScenarioTools.updateWidgets(context, prefs)
                 }
             }
 
             val updateFootnoteStyle = { style: FootnoteStyle ->
-                coroutineScope.launch { context.dataStore.edit { p -> p[footnoteStyleKey] = style.name } }
+                coroutineScope.launch {
+                    progressStore.edit { p ->
+                        if (!ScenarioTools.isCurrentSnapshot(prefs, p)) return@edit
+                        p[footnoteStyleKey] = style.name
+                    }
+                }
             }
 
             val updateFontSize = { size: FontSizeOption ->
-                coroutineScope.launch { context.dataStore.edit { p -> p[fontSizeKey] = size.name } }
+                coroutineScope.launch {
+                    progressStore.edit { p ->
+                        if (!ScenarioTools.isCurrentSnapshot(prefs, p)) return@edit
+                        p[fontSizeKey] = size.name
+                    }
+                }
             }
 
             val updateGrammarColors = { show: Boolean ->
-                coroutineScope.launch { context.dataStore.edit { p -> p[showGrammarColorsKey] = show } }
+                coroutineScope.launch {
+                    progressStore.edit { p ->
+                        if (!ScenarioTools.isCurrentSnapshot(prefs, p)) return@edit
+                        p[showGrammarColorsKey] = show
+                    }
+                }
             }
 
             val updateFootnoteColors = { show: Boolean ->
-                coroutineScope.launch { context.dataStore.edit { p -> p[showFootnoteColorsKey] = show } }
+                coroutineScope.launch {
+                    progressStore.edit { p ->
+                        if (!ScenarioTools.isCurrentSnapshot(prefs, p)) return@edit
+                        p[showFootnoteColorsKey] = show
+                    }
+                }
             }
 
             val updateShowHeadings = { show: Boolean ->
-                coroutineScope.launch { context.dataStore.edit { p -> p[showHeadingsKey] = show } }
+                coroutineScope.launch {
+                    progressStore.edit { p ->
+                        if (!ScenarioTools.isCurrentSnapshot(prefs, p)) return@edit
+                        p[showHeadingsKey] = show
+                    }
+                }
             }
 
             val updateBibleVersion = { version: BibleVersion ->
                 coroutineScope.launch {
-                    context.dataStore.edit { p ->
+                    progressStore.edit { p ->
+                        if (!ScenarioTools.isCurrentSnapshot(prefs, p)) return@edit
                         p[bibleVersionKey] = version.code
                         if (version == BibleVersion.LXX || version == BibleVersion.HEB || version == BibleVersion.VULGATE) {
                             p[footnoteStyleKey] = FootnoteStyle.HIDDEN.name
@@ -791,7 +836,8 @@ fun MainAppContainer(
                             currentGraceDay = currentGraceDay,
                             onTrackChange = { newTrack ->
                                 coroutineScope.launch {
-                                    context.dataStore.edit { p ->
+                                    progressStore.edit { p ->
+                                        if (!ScenarioTools.isCurrentSnapshot(prefs, p)) return@edit
                                         p[readingTrackKey] = newTrack.name
                                         p[planStartDateKey] = todayStr
                                         p[checkmarksDateKey] = cycleStartStr
@@ -810,7 +856,8 @@ fun MainAppContainer(
                             },
                             onGraceDayChange = { newDay ->
                                 coroutineScope.launch {
-                                    context.dataStore.edit { p ->
+                                    progressStore.edit { p ->
+                                        if (!ScenarioTools.isCurrentSnapshot(prefs, p)) return@edit
                                         p[graceDayKey] = newDay.name
                                         // Grace Day changes the catch-up
                                         // deadline, not the reading-plan
@@ -829,9 +876,11 @@ fun MainAppContainer(
                                     }
                                 }
                             },
+                            developmentTools = { ScenarioTools.Entry() },
                             onReplayTutorial = {
                                 coroutineScope.launch {
-                                    context.dataStore.edit { p ->
+                                    progressStore.edit { p ->
+                                        if (!ScenarioTools.isCurrentSnapshot(prefs, p)) return@edit
                                         p[hasSeenOnboardingKey] = false
                                     }
                                 }
