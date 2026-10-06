@@ -168,7 +168,7 @@ class DailyPsalmsWidget : GlanceAppWidget() {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "🔥 $displayStreak Days",
+                    text = "🔥 $displayStreak ${if (displayStreak == 1) "Day" else "Days"}",
                     style = TextStyle(
                         color = ColorProvider(day = Color.White, night = Color.White),
                         fontSize = 16.sp,
