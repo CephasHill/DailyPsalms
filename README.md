@@ -9,6 +9,35 @@ I wanted to build that habit for myself, but standard Bible apps and physical bo
 
 I built this app to solve that problem. It calculates the daily chapters for you, tracks your streak, and provides deep study tools right inline. What started as a personal tool eventually grew into a public Play Store release.
 
+## In the App
+
+<p align="center">
+  <img src="screenshots/FeatureGraphic.png" alt="Daily Psalms feature graphic" width="100%">
+</p>
+
+<table>
+  <tr>
+    <td align="center"><img src="screenshots/Showcase1.png" alt="Daily reading plan and streak progress" width="250"></td>
+    <td align="center"><img src="screenshots/Showcase2.png" alt="Offline Psalm reading view" width="250"></td>
+    <td align="center"><img src="screenshots/Showcase4.png" alt="Hebrew lexicon word study" width="250"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Daily reading plan</sub></td>
+    <td align="center"><sub>Distraction-free offline reading</sub></td>
+    <td align="center"><sub>Original-language study tools</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/Showcase5.png" alt="Translation selector with modern, historical, and original-language options" width="250"></td>
+    <td align="center"><img src="screenshots/Showcase6.png" alt="Customizable reading schedule settings" width="250"></td>
+    <td align="center"><img src="screenshots/Showcase7.png" alt="Daily Psalms home screen widget" width="250"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Multiple translations</sub></td>
+    <td align="center"><sub>Flexible reading schedules</sub></td>
+    <td align="center"><sub>Home screen widget</sub></td>
+  </tr>
+</table>
+
 ## AI-Augmented Development
 This was my very first app, and I could not have built it on my own. I used a heavily AI-augmented workflow. I directed the system logic and designed the UI, and I leveraged AI to write the syntax and walk me through the implementation step by step.
 
